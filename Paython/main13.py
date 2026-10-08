@@ -1,3 +1,4 @@
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, send_from_directory
 import os
 import re
@@ -972,8 +973,17 @@ def session_owns_job(job_id: str, job: dict | None = None) -> bool:
 # Discordログイン（チャット・管理者）/ サイトアカウント（VIP）
 # =====================
 def current_user():
-    """Discordログイン中のチャット用ユーザー。VIP判定には使用しない。"""
-    return session.get("discord_user")
+    """Discord identity uses its own signed cookie, isolated from polling sessions."""
+    value = request.cookies.get("catps_discord_login_v2", "")
+    if not value:
+        return None
+    try:
+        user = URLSafeTimedSerializer(app.secret_key, salt="catps-discord-login-v2").loads(value, max_age=30 * 86400)
+    except (BadSignature, SignatureExpired):
+        return None
+    if not isinstance(user, dict) or not re.fullmatch(r"\d{15,22}", str(user.get("id", ""))):
+        return None
+    return user
 
 
 def current_site_user():
@@ -1024,98 +1034,101 @@ def _valid_admin_csrf() -> bool:
 @app.route("/auth/login")
 @limiter.limit("20 per minute")
 def auth_login():
-    if not DISCORD_CLIENT_ID or not DISCORD_REDIRECT_URI:
+    if not DISCORD_CLIENT_ID or not DISCORD_CLIENT_SECRET or not DISCORD_REDIRECT_URI:
         print("[ERROR] Discord OAuth設定が不足しています")
         return redirect("/?login_error=config")
-    state = secrets.token_urlsafe(24)
-    session["oauth_state"] = state
+    nonce = secrets.token_urlsafe(32)
     oauth_next = request.args.get("next", "/")
-    allowed_next = {"/", "/admin/panel", "/admin/vip", "/admin/logs"}
-    session["oauth_next"] = oauth_next if oauth_next in allowed_next else "/"
+    allowed_next = {"/", "/vip", "/admin/panel", "/admin/vip", "/admin/logs"}
+    state = URLSafeTimedSerializer(app.secret_key, salt="catps-discord-oauth-v2").dumps({
+        "nonce": nonce,
+        "next": oauth_next if oauth_next in allowed_next else "/",
+    })
     params = {
-        "client_id": DISCORD_CLIENT_ID,
-        "redirect_uri": DISCORD_REDIRECT_URI,
-        "response_type": "code",
-        "scope": OAUTH_SCOPES,
-        "state": state,
+        "client_id": DISCORD_CLIENT_ID, "redirect_uri": DISCORD_REDIRECT_URI,
+        "response_type": "code", "scope": OAUTH_SCOPES, "state": state,
     }
-    return redirect(f"{DISCORD_API}/oauth2/authorize?{urlencode(params)}")
+    response = redirect(f"{DISCORD_API}/oauth2/authorize?{urlencode(params)}")
+    response.set_cookie("catps_discord_oauth_v2", nonce, max_age=600,
+                        secure=app.session_interface.get_cookie_secure(app),
+                        httponly=True, samesite="Lax", path="/auth")
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.route("/auth/callback")
 @limiter.limit("20 per minute")
 def auth_callback():
+    def finish(response):
+        response.delete_cookie("catps_discord_oauth_v2", path="/auth",
+                               secure=app.session_interface.get_cookie_secure(app),
+                               httponly=True, samesite="Lax")
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
     state = request.args.get("state", "")
-    expected_state = session.pop("oauth_state", "")
-    if not state or not expected_state or not secrets.compare_digest(state, expected_state):
-        print("[ERROR] Discord OAuth stateが一致しません")
-        return redirect("/?login_error=state")
-
-    oauth_error = request.args.get("error")
-    if oauth_error:
-        print(f"[ERROR] Discord OAuth denied: {oauth_error}")
-        return redirect("/?login_error=denied")
-
+    nonce = request.cookies.get("catps_discord_oauth_v2", "")
+    try:
+        payload = URLSafeTimedSerializer(app.secret_key, salt="catps-discord-oauth-v2").loads(state, max_age=600)
+        expected = payload.get("nonce", "") if isinstance(payload, dict) else ""
+        valid = isinstance(expected, str) and bool(nonce) and bool(expected) and secrets.compare_digest(nonce, expected)
+    except (BadSignature, SignatureExpired):
+        valid = False
+    if not valid:
+        print("[ERROR] Discord OAuth stateを確認できません（専用Cookie・有効期限・固定秘密鍵を確認）")
+        return finish(redirect("/?login_error=state"))
+    if request.args.get("error"):
+        print("[ERROR] Discord OAuth認証がキャンセルされました")
+        return finish(redirect("/?login_error=denied"))
     code = request.args.get("code")
     if not code:
-        return redirect("/?login_error=code")
-
+        return finish(redirect("/?login_error=code"))
     try:
-        token_res = requests.post(
-            f"{DISCORD_API}/oauth2/token",
-            data={
-                "client_id": DISCORD_CLIENT_ID,
-                "client_secret": DISCORD_CLIENT_SECRET,
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": DISCORD_REDIRECT_URI,
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=10,
-            proxies=PROXIES,
-        )
+        token_res = requests.post(f"{DISCORD_API}/oauth2/token", data={
+            "client_id": DISCORD_CLIENT_ID, "client_secret": DISCORD_CLIENT_SECRET,
+            "grant_type": "authorization_code", "code": code,
+            "redirect_uri": DISCORD_REDIRECT_URI,
+        }, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=10, proxies=PROXIES)
         if token_res.status_code != 200:
             print(f"[ERROR] Discord token exchange: HTTP {token_res.status_code}")
-            return redirect("/?login_error=token")
-
-        access_token = token_res.json().get("access_token")
-        if not access_token:
-            print("[ERROR] Discord token exchange: access_tokenがありません")
-            return redirect("/?login_error=token")
-
-        user_res = requests.get(
-            f"{DISCORD_API}/users/@me",
-            headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10,
-            proxies=PROXIES,
-        )
+            return finish(redirect("/?login_error=token"))
+        token = token_res.json().get("access_token")
+        if not token:
+            return finish(redirect("/?login_error=token"))
+        user_res = requests.get(f"{DISCORD_API}/users/@me",
+                                headers={"Authorization": f"Bearer {token}"}, timeout=10, proxies=PROXIES)
         if user_res.status_code != 200:
             print(f"[ERROR] Discord user fetch: HTTP {user_res.status_code}")
-            return redirect("/?login_error=user")
-
-        u = user_res.json()
-        discord_id = u["id"]
-
-        session.permanent = True
-        session["discord_user"] = {
-            "id": discord_id,
-            "username": u.get("username"),
-            "avatar": u.get("avatar"),
-            # DiscordロールはVIP判定に使用しない。チャット互換用に常にFalseを保持する。
-            "is_vip": False,
-        }
-    except Exception as e:
-        print(f"[ERROR] auth_callback: {e}")
-        return redirect("/?login_error=network")
-
-    return redirect(session.pop("oauth_next", "/"))
+            return finish(redirect("/?login_error=user"))
+        user = user_res.json()
+        if not re.fullmatch(r"\d{15,22}", str(user.get("id", ""))):
+            return finish(redirect("/?login_error=user"))
+        identity = {"id": str(user["id"]), "username": str(user.get("username", ""))[:100],
+                    "avatar": user.get("avatar"), "is_vip": False}
+        signed = URLSafeTimedSerializer(app.secret_key, salt="catps-discord-login-v2").dumps(identity)
+        target = payload.get("next", "/")
+        if target not in {"/", "/vip", "/admin/panel", "/admin/vip", "/admin/logs"}:
+            target = "/"
+        response = redirect(target)
+        response.set_cookie("catps_discord_login_v2", signed, max_age=30 * 86400,
+                            secure=app.session_interface.get_cookie_secure(app),
+                            httponly=True, samesite="Lax", path="/")
+        return finish(response)
+    except Exception as error:
+        print(f"[ERROR] auth_callback: {type(error).__name__}")
+        return finish(redirect("/?login_error=network"))
 
 
 @app.route("/auth/logout")
 @limiter.limit("20 per minute")
 def auth_logout():
     session.pop("discord_user", None)
-    return redirect("/")
+    response = redirect("/")
+    for name, path in [("catps_discord_login_v2", "/"), ("catps_discord_oauth_v2", "/auth")]:
+        response.delete_cookie(name, path=path, secure=app.session_interface.get_cookie_secure(app),
+                               httponly=True, samesite="Lax")
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.route("/auth/status")
