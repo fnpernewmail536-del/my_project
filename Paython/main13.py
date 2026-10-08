@@ -166,6 +166,15 @@ ADMIN_SNAPSHOT_KEY = os.getenv("ADMIN_SNAPSHOT_KEY", "").strip()
 def validate_transfer_auth_codes(data):
     tc = str(data.get("transfer_code", "")).strip()
     ac = str(data.get("auth_code", "")).strip()
+
     if not TRANSFER_CODE_RE.match(tc):
-        return jsonify({"error": "引き継ぎコードは9桁の16進数（0-9,a-f）で入力してください"}), 400
-    if not AUTH_CODE:
+        return jsonify({
+            "error": "引き継ぎコードは9桁の16進数（0-9,a-f）で入力してください"
+        }), 400
+
+    if len(ac) != 4 or any(c not in "0123456789" for c in ac):
+        return jsonify({
+            "error": "認証番号は4桁の数字で入力してください"
+        }), 400
+
+    return None
