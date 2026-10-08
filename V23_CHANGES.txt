@@ -1,0 +1,8 @@
+CatProxyService v23
+
+- index_alt.html / vip_alt.html を追加
+- テーマ設定画面からクラシックHTMLとワイドHTMLを選択可能
+- 選択は catps_layout Cookie に保存され、そのブラウザだけに適用
+- / と /vip は選択されたHTMLをサーバー側で自動表示
+- ワイドHTMLはモード選択を上部へ移動し、設定カードをタイル配置
+- 既存の代行・作成・複製・VIP・履歴・招待・テーマ背景などの処理ロジックは変更なし

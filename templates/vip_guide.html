@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="{{ ui_language|default('ja') }}" class="theme-{{ theme_layout|default('classic') }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="CatProxyServiceのVIP限定機能、利用条件、購入方法をご案内します。">
+<title>CatProxyService VIP</title>
+<style>
+  :root{--bg:#0b0c12;--surface:#151720;--surface2:#1c1f2b;--border:#2c3040;--text:#f2f3f7;--muted:#9aa0b6;--cyan:#38bdf8;--gold:#facc15;--gold2:#f59e0b;--green:#22c55e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{min-height:100vh;background:radial-gradient(circle at 78% 0,rgba(250,204,21,.08),transparent 34%),radial-gradient(circle at 12% 18%,rgba(56,189,248,.07),transparent 28%),var(--bg);color:var(--text);font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP','Yu Gothic',sans-serif;line-height:1.7}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='150'%3E%3Ctext x='18' y='90' transform='rotate(-24 18 90)' fill='%23fff' fill-opacity='.035' font-family='Arial' font-size='22' font-weight='700'%3Ecatps.com%3C/text%3E%3C/svg%3E");z-index:0}
+  a{color:inherit;text-decoration:none}
+  header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:13px max(18px,calc((100vw - 1080px)/2));border-bottom:1px solid var(--border);background:rgba(11,12,18,.9);backdrop-filter:blur(14px)}
+  .brand{font-weight:900;letter-spacing:.04em}.brand span{color:var(--cyan)}
+  .spacer{flex:1}.nav{display:flex;gap:8px;align-items:center}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 18px;border:1px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);font:700 13px/1.3 inherit;cursor:pointer;transition:.15s}
+  .btn:hover{border-color:var(--cyan);transform:translateY(-1px)}
+  .btn-gold{color:#100d00;border-color:#fde047;background:linear-gradient(135deg,#fde047,var(--gold2));box-shadow:0 8px 30px rgba(250,204,21,.18)}
+  .btn-gold:hover{border-color:#fff3ad;box-shadow:0 10px 36px rgba(250,204,21,.28)}
+  main{position:relative;z-index:1;width:min(1080px,calc(100% - 30px));margin:0 auto;padding:58px 0 110px}
+  .hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(310px,.7fr);gap:28px;align-items:stretch}
+  .eyebrow{display:inline-flex;padding:5px 11px;border:1px solid rgba(250,204,21,.36);border-radius:99px;background:rgba(250,204,21,.08);color:#fde68a;font-size:11px;font-weight:900;letter-spacing:.14em}
+  h1{max-width:760px;margin:15px 0 14px;font-size:clamp(34px,6vw,68px);line-height:1.07;letter-spacing:-.035em}
+  h1 em{color:var(--gold);font-style:normal}
+  .lead{max-width:690px;color:#c6cada;font-size:clamp(14px,2vw,17px)}
+  .hero-points{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0}
+  .hero-point{padding:7px 11px;border:1px solid var(--border);border-radius:8px;background:rgba(21,23,32,.82);font-size:12px;color:#e8eaf1}
+  .hero-point::before{content:'✓';margin-right:7px;color:var(--green);font-weight:900}
+  .hero-actions{display:flex;flex-wrap:wrap;gap:10px}
+  .plan{display:flex;flex-direction:column;padding:24px;border:1px solid rgba(250,204,21,.42);border-radius:16px;background:linear-gradient(150deg,rgba(250,204,21,.12),rgba(21,23,32,.92) 45%);box-shadow:0 24px 60px rgba(0,0,0,.28)}
+  .plan-label{font-size:12px;color:#fde68a;font-weight:800}.price{margin:7px 0 3px;font-size:30px;font-weight:900}.price-note{color:var(--muted);font-size:11px}
+  .plan ul{display:grid;gap:9px;margin:22px 0;padding:0;list-style:none;color:#dfe2ea;font-size:13px}.plan li::before{content:'●';margin-right:9px;color:var(--gold);font-size:8px;vertical-align:2px}
+  .plan .btn{margin-top:auto}
+  .pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}.price-card{position:relative;padding:22px;border:1px solid var(--border);border-radius:14px;background:rgba(21,23,32,.9)}.price-card.recommended{border-color:rgba(250,204,21,.58);background:linear-gradient(145deg,rgba(250,204,21,.12),rgba(21,23,32,.94) 46%);box-shadow:0 18px 48px rgba(0,0,0,.24)}.recommend{position:absolute;right:13px;top:13px;padding:3px 8px;border-radius:99px;background:var(--gold);color:#171100;font-size:9px;font-weight:900}.price-days{font-size:18px;font-weight:900}.price-yen{margin:5px 0 3px;color:var(--gold);font-size:30px;font-weight:900}.price-desc{min-height:42px;color:var(--muted);font-size:11px}.price-card .btn{width:100%;margin-top:16px}.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}.stat{padding:16px;border:1px solid var(--border);border-radius:11px;background:rgba(21,23,32,.8);text-align:center}.stat strong{display:block;color:var(--cyan);font-size:24px}.stat span{color:var(--muted);font-size:10px}
+  section{scroll-margin-top:88px;margin-top:72px}
+  .section-kicker{color:var(--cyan);font-size:11px;font-weight:900;letter-spacing:.14em}.section-title{margin:4px 0 9px;font-size:clamp(24px,4vw,36px);line-height:1.25}.section-copy{color:var(--muted);font-size:13px}
+  .benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}.benefit{padding:20px;border:1px solid var(--border);border-radius:12px;background:rgba(21,23,32,.86)}
+  .benefit-no{color:var(--gold);font-size:11px;font-weight:900}.benefit h3{margin:7px 0 5px;font-size:15px}.benefit p{color:var(--muted);font-size:12px}
+  .compare-wrap{margin-top:23px;overflow:hidden;border:1px solid var(--border);border-radius:14px;background:rgba(21,23,32,.9)}
+  table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:14px 16px;border-bottom:1px solid var(--border);text-align:center}th:first-child,td:first-child{text-align:left}th{color:var(--muted);font-size:11px;letter-spacing:.08em}th:last-child{color:var(--gold)}tr:last-child td{border-bottom:0}.yes{color:var(--green);font-weight:800}.limited{color:var(--muted)}.vip-value{color:#fde68a;font-weight:800}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}.step{position:relative;padding:20px;border:1px solid var(--border);border-radius:12px;background:rgba(21,23,32,.86)}.step-num{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--gold);color:#171200;font-weight:900;font-size:12px}.step h3{margin:11px 0 4px;font-size:14px}.step p{color:var(--muted);font-size:12px}
+  .faq{display:grid;gap:8px;margin-top:22px}.faq details{border:1px solid var(--border);border-radius:10px;background:rgba(21,23,32,.86);padding:0 16px}.faq summary{padding:14px 0;cursor:pointer;font-size:13px;font-weight:800}.faq p{padding:0 0 14px;color:var(--muted);font-size:12px}
+  .final{padding:28px;border:1px solid rgba(250,204,21,.35);border-radius:16px;background:linear-gradient(135deg,rgba(250,204,21,.11),rgba(56,189,248,.06));text-align:center}.final p{margin:7px auto 18px;color:var(--muted);font-size:13px}.final-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:9px}
+  .current{margin-bottom:15px;padding:10px 13px;border:1px solid rgba(34,197,94,.35);border-radius:9px;background:rgba(34,197,94,.08);color:#bbf7d0;font-size:12px;font-weight:800}
+  .mobile-buy{display:none}
+  @media(max-width:780px){header{padding:11px 14px}.nav .hide-mobile{display:none}main{padding-top:35px}.hero{grid-template-columns:1fr}.benefits{grid-template-columns:1fr 1fr}.steps,.pricing-grid{grid-template-columns:1fr}.plan{min-height:360px}}
+  @media(max-width:540px){main{width:min(100% - 22px,1080px)}.benefits{grid-template-columns:1fr}.stats-grid{grid-template-columns:1fr 1fr}.stats-grid .stat:last-child{grid-column:1/-1}.hero-actions .btn{width:100%}th,td{padding:11px 8px;font-size:11px}.compare-wrap{overflow-x:auto}table{min-width:520px}.mobile-buy{display:flex;position:fixed;z-index:30;left:10px;right:10px;bottom:9px;padding:9px;border:1px solid rgba(250,204,21,.35);border-radius:12px;background:rgba(11,12,18,.94);backdrop-filter:blur(12px)}.mobile-buy .btn{width:100%}}
+</style>
+
+{% if theme_layout == 'classic' %}
+<style id="minecraft-bedrock-theme">
+/* Minecraft-style visual theme only: layout, JavaScript and element dimensions are intentionally left intact. */
+:root{
+  --mc-sky:#718bc3;
+  --mc-sky2:#9eb2dc;
+  --mc-grass:#5f8d3b;
+  --mc-grass2:#416c2d;
+  --mc-dirt:#76502f;
+  --mc-stone:#b9b9b9;
+  --mc-stone-light:#d7d7d7;
+  --mc-stone-dark:#555;
+  --mc-black:#222;
+  --mc-white:#f3f3f3;
+  --mc-green:#3f7d35;
+  --mc-green-dark:#315f2b;
+  --mc-gold:#d8a91e;
+  --mc-red:#a83b36;
+}
+html{background:var(--mc-sky)}
+body{
+  font-family:"MS Gothic","ＭＳ ゴシック","Yu Gothic",monospace !important;
+  color:#222 !important;
+  background:
+    linear-gradient(to bottom,rgba(255,255,255,.05) 0 34%,transparent 34%),
+    linear-gradient(to bottom,var(--mc-sky) 0 47%,var(--mc-grass) 47% 70%,var(--mc-dirt) 70% 100%) !important;
+}
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  opacity:.18;
+  background:
+    repeating-linear-gradient(0deg,transparent 0 15px,rgba(0,0,0,.12) 15px 16px),
+    repeating-linear-gradient(90deg,transparent 0 15px,rgba(255,255,255,.08) 15px 16px);
+  mix-blend-mode:multiply;
+}
+header{
+  background:#4b4b4b !important;
+  border-bottom:3px solid #303030 !important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.25),inset 0 -2px 0 rgba(0,0,0,.35),0 3px 0 rgba(0,0,0,.25) !important;
+  backdrop-filter:none !important;
+  color:#fff !important;
+}
+.logo,.brand,.brand span{color:#fff !important;text-shadow:2px 2px 0 #333 !important}
+.logo span{color:#d7d7d7 !important}
+.btn,.button,.link{
+  background:#c6c6c6 !important;
+  color:#222 !important;
+  border:2px solid #4d4d4d !important;
+  border-radius:2px !important;
+  box-shadow:inset 2px 2px 0 rgba(255,255,255,.8),inset -2px -2px 0 rgba(70,70,70,.65),0 2px 0 rgba(0,0,0,.25) !important;
+  text-shadow:none !important;
+}
+.btn:hover,.link:hover,.button:hover{
+  background:#d7d7d7 !important;
+  border-color:#333 !important;
+  color:#111 !important;
+  transform:none !important;
+}
+.btn.primary,.button{
+  background:#5c8f43 !important;
+  color:#fff !important;
+  border-color:#304d25 !important;
+  text-shadow:2px 2px 0 rgba(0,0,0,.35) !important;
+}
+.btn.gold,.btn-gold{
+  background:#d8a91e !important;
+  color:#fff !important;
+  border-color:#6d5410 !important;
+}
+.card,.panel,.plan,.price-card,.metric,.account,.detail-surface,.confirm-card,
+.vip-promo,.trial,.codes,.summary div,.tabs,.sidebar,.chat,.composer-wrap,.payment-box,
+.result-box,.code-box,.character-search-card,.filter-block,.lineup-editor,.ototo-unit-card,
+.preset-item,.free-preset-dialog,.free-preset-modal,.invite-drawer,.top-notice{
+  background:#c6c6c6 !important;
+  color:#222 !important;
+  border-color:#555 !important;
+  border-radius:2px !important;
+  box-shadow:inset 2px 2px 0 rgba(255,255,255,.72),inset -2px -2px 0 rgba(65,65,65,.45),0 3px 0 rgba(0,0,0,.22) !important;
+}
+.panel-head,.chat-head,.detail-head,.order-cell,.order-strip div,.progress,
+.quick-actions,.tabs,.composer-wrap,.payment-box{
+  background:#9f9f9f !important;
+  color:#222 !important;
+  border-color:#555 !important;
+}
+input,select,textarea,.code-form input,.id,.unlock-code,.code-display{
+  background:#f0f0f0 !important;
+  color:#222 !important;
+  border:2px solid #555 !important;
+  border-radius:2px !important;
+  box-shadow:inset 2px 2px 0 rgba(0,0,0,.12) !important;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:#315f2b !important;
+  box-shadow:inset 2px 2px 0 rgba(0,0,0,.12),0 0 0 2px rgba(63,125,53,.25) !important;
+}
+p,.lead,.meta,.small,.muted,.helper,.identity,.status,.ticket-meta,.account small,.side-title,
+.eyebrow,.section-kicker,.section-copy,.price-note,.price-desc,.payment-help,.empty,
+.welcome p,.rule,.switch,.back{
+  color:#4a4a4a !important;
+}
+h1,h2,h3,.card-title,.section-title,.detail-title h2,.chat-head h1,.panel h2,.welcome h1,
+.plan-price,.price,.plan-label,.price-yen,.price-days,.ticket-name,.name,.account strong,
+.vip strong,.trial strong,.metric strong,.summary strong,.hero-point,.hero-point::before{
+  color:#222 !important;
+  text-shadow:1px 1px 0 rgba(255,255,255,.35) !important;
+}
+a{color:#315f2b !important}
+.tab,.hist-tab-btn,.count-btn,.opt,.ticket-link,.conversation{
+  background:#adadad !important;
+  color:#222 !important;
+  border-color:#666 !important;
+  border-radius:2px !important;
+}
+.tab.active,.hist-tab-btn.active,.count-btn.active,.opt.active,.ticket-link.active,.conversation:hover{
+  background:#5f8d3b !important;
+  color:#fff !important;
+  border-color:#304d25 !important;
+}
+.vip-badge,.key,.ticket-key,.account-id,code,.code-val,.lineup-cat-number,.lineup-cat-name{
+  color:#315f2b !important;
+}
+.status-badge,.badge,.admin-badge,.tag,.applied-tag,.hero-point,.eyebrow{
+  background:#adadad !important;
+  color:#222 !important;
+  border-color:#666 !important;
+  border-radius:2px !important;
+}
+.vip-mark,.recommend,.plan-label{
+  color:#fff !important;
+  background:#d8a91e !important;
+  border-color:#6d5410 !important;
+}
+.progress-step.done{
+  background:#5f8d3b !important;color:#fff !important;border-color:#304d25 !important;
+}
+.progress-step.current{
+  background:#6e8fba !important;color:#fff !important;border-color:#3d526e !important;
+}
+.error,.error-msg,.field-error,.restriction,.deleted{color:#8e2924 !important}
+.success,.ok{color:#315f2b !important}
+.send{background:#5f8d3b !important;color:#fff !important;border-color:#304d25 !important}
+.avatar{background:#666 !important;color:#fff !important;border:2px solid #444}
+.spinner{border-color:#777 !important;border-top-color:#5f8d3b !important}
+body > main,body > .wrap,body > .shell,body > .app,body > .main{
+  position:relative;
+  z-index:1;
+}
+.bg-overlay{
+  background:linear-gradient(to bottom,rgba(30,40,70,.12),rgba(42,68,27,.22)) !important;
+}
+.bg-video{filter:saturate(.85) contrast(1.03) brightness(.92)}
+.vip-link,.btn-gold{box-shadow:inset 2px 2px 0 rgba(255,255,255,.35),inset -2px -2px 0 rgba(80,50,0,.45),0 2px 0 rgba(0,0,0,.25) !important}
+button:disabled{filter:grayscale(.25);opacity:.55}
+</style>
+
+
+<style id="minecraft-bedrock-theme-v2">
+/* Minecraft UI refinement: flatten outer wrappers so every visible panel stands alone. */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+:root{
+  --mc-pixel-font:'Press Start 2P','Courier New','MS Gothic',monospace;
+  --mc-body-font:'Press Start 2P','Courier New','MS Gothic',monospace;
+}
+
+/* Outer layout containers stay transparent; only actual cards/panels get a block frame. */
+.main,.wrap,.shell,.app,.layout,.workspace,.grid,
+body > main,body > .wrap,body > .shell,body > .app,body > .main{
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
+
+/* Do not stack a translucent/parent frame over the independent cards. */
+.card,.panel,.metric,.account,.plan,.price-card,.vip-promo,.trial,
+.detail-surface,.confirm-card,.result-box,.code-box,.character-search-card,
+.filter-block,.lineup-editor,.ototo-unit-card,.preset-item,.top-notice,
+.free-preset-dialog,.invite-drawer{
+  opacity:1 !important;
+  backdrop-filter:none !important;
+  background:#c6c6c6 !important;
+  border:2px solid #555 !important;
+  border-radius:0 !important;
+  box-shadow:inset 2px 2px 0 #f4f4f4,inset -2px -2px 0 #6a6a6a,3px 3px 0 rgba(0,0,0,.32) !important;
+}
+
+/* Nested structural wrappers should not become a second gray card. */
+.card > .card,.panel > .panel,.card > .panel,.panel > .card,
+.card .grid,.panel .grid,.card .workspace,.panel .workspace,
+.card .layout,.panel .layout{
+  background:transparent !important;
+  border-color:transparent !important;
+  box-shadow:none !important;
+}
+
+/* Pixel/block lettering. Headings use the Minecraft-like display font; body text remains readable. */
+.logo,.brand,h1,h2,h3,.card-title,.section-title,.detail-title h2,
+.chat-head h1,.panel h2,.welcome h1,.plan-price,.price,.price-yen,
+.price-days,.plan-label,.ticket-name,.account strong,.vip strong,
+.metric strong,.summary strong,.hero-point,.eyebrow,
+.btn,.button,.link,.tab,.hist-tab-btn,.count-btn,.opt,.ticket-link,
+.conversation,.status-badge,.badge,.admin-badge,.tag,.applied-tag,
+.vip-badge,.key,.ticket-key,.account-id,code,.code-val,.lineup-cat-number,
+.lineup-cat-name{
+  font-family:var(--mc-pixel-font) !important;
+  letter-spacing:.02em;
+}
+
+body,p,.lead,.meta,.small,.muted,.helper,.identity,.status,.ticket-meta,
+.account small,.side-title,.section-kicker,.section-copy,.price-note,
+.price-desc,.payment-help,.empty,.welcome p,.rule,.switch,.back,
+input,select,textarea{
+  font-family:'Courier New','MS Gothic','ＭＳ ゴシック',monospace !important;
+}
+
+/* Keep the header as the strong top Minecraft frame. */
+header{
+  background:#555 !important;
+  border-bottom:3px solid #2d2d2d !important;
+  box-shadow:inset 0 2px 0 #8a8a8a,inset 0 -2px 0 #303030,0 3px 0 rgba(0,0,0,.3) !important;
+  backdrop-filter:none !important;
+}
+
+/* Remove translucent overlays that visually sit on top of cards. */
+.bg-overlay{opacity:0 !important;background:transparent !important;}
+.vip-promo::after{opacity:.05 !important;}
+
+/* Block-style controls. */
+.btn,.button,.link{
+  border-radius:0 !important;
+  box-shadow:inset 2px 2px 0 #f4f4f4,inset -2px -2px 0 #555,2px 2px 0 rgba(0,0,0,.28) !important;
+}
+
+/* Keep modal backdrops as backdrops, but never as an extra panel. */
+.free-preset-modal{background:rgba(0,0,0,.62) !important;box-shadow:none !important;border:0 !important;}
+
+@media(max-width:640px){
+  .main,.wrap,.shell,.app,.layout,.workspace,.grid{background:transparent !important;box-shadow:none !important;}
+}
+</style>
+
+
+<!-- CatProxyService Minecraft Menu Reproduction v3 -->
+<style>
+/* ===== CatProxyService / Minecraft Menu Reproduction v3 ===== */
+:root{
+  --mc-panel:#c6c6c6;
+  --mc-panel-hi:#f4f4f4;
+  --mc-panel-lo:#555555;
+  --mc-panel-deep:#373737;
+  --mc-text:#202020;
+  --mc-shadow:rgba(0,0,0,.45);
+  --mc-green:#3b8526;
+  --mc-green-hi:#6fae3b;
+}
+html{background:transparent!important;}
+body{
+  color:var(--mc-text) !important;
+  font-family:"MS Gothic","ＭＳ ゴシック","Yu Gothic UI","Noto Sans JP",monospace !important;
+  font-weight:400;
+  letter-spacing:.01em;
+  image-rendering:auto;
+  text-rendering:geometricPrecision;
+  background:
+    linear-gradient(rgba(0,0,0,.10),rgba(0,0,0,.30)),
+    url("minecraft-bg.png") center center / cover fixed no-repeat !important;
+  position:relative;
+}
+body::before{
+  content:"" !important;
+  position:fixed !important;
+  inset:0 !important;
+  z-index:0 !important;
+  pointer-events:none !important;
+  background:linear-gradient(180deg,rgba(34,76,115,.08) 0%,rgba(0,0,0,.08) 55%,rgba(0,0,0,.28) 100%) !important;
+  opacity:1 !important;
+}
+body::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  box-shadow:inset 0 0 90px rgba(0,0,0,.28);
+}
+body>*{position:relative;z-index:1;}
+
+/* Remove modern translucent shells: only actual content cards remain visible. */
+.app,.shell,.main,.wrap,main,.layout,.workspace,.grid,.hero,.pricing-grid,.benefits,.steps,.compare-wrap,
+.content,.chat,.sidebar,.panel-group,.section-wrap{
+  background:transparent !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important;
+}
+
+/* Header: the strongest frame, like the top Minecraft menu controls. */
+header,.header{
+  background:linear-gradient(#7b7b7b 0,#686868 48%,#555 49%,#686868 100%) !important;
+  border:0 !important;
+  border-bottom:4px solid #303030 !important;
+  box-shadow:inset 0 3px 0 #bdbdbd,inset 0 -3px 0 #3a3a3a,0 4px 0 rgba(0,0,0,.32) !important;
+  backdrop-filter:none !important;
+}
+.brand,.logo,.header h1,.head h1{
+  color:#fff !important;
+  text-shadow:2px 2px 0 #333 !important;
+  font-family:"MS Gothic","ＭＳ ゴシック","Noto Sans JP",monospace !important;
+  letter-spacing:.04em !important;
+}
+.brand span,.logo span{color:#e9e9e9 !important;}
+
+/* Every real panel becomes its own independent Minecraft-style block. */
+.card,.panel,.price-card,.plan,.benefit,.step,.confirm-card,.account,.trial,.metric,.ticket,.ticket-link,
+.compare-wrap,.faq details,.final,.id,.vip,.codes,.grant,.order-summary,.order-cell,.payment-box,
+.notice,.restriction,.tabs,.dm-head,.conversation,.composer-wrap,.side-title,.summary div,
+.detail,.detail-head,.next-action,.paypay-card,.section-card{
+  background:rgba(198,198,198,.96) !important;
+  color:var(--mc-text) !important;
+  border:3px solid #555 !important;
+  border-radius:0 !important;
+  box-shadow:inset 3px 3px 0 rgba(255,255,255,.92),inset -3px -3px 0 rgba(55,55,55,.95),4px 4px 0 var(--mc-shadow) !important;
+  backdrop-filter:none !important;
+}
+
+/* Independent spacing: no nested translucent frame effect. */
+.grid,.workspace{gap:22px !important;}
+main{max-width:1100px !important;}
+.card,.panel,.price-card,.plan,.benefit,.step,.confirm-card{padding:22px !important;}
+
+h1,h2,h3,.section-title,.panel h2,.card h2,.plan h2,.price-card h3,.benefit h3,.step h3{
+  color:#202020 !important;
+  text-shadow:1px 1px 0 #eee !important;
+  font-family:"MS Gothic","ＭＳ ゴシック","Yu Gothic UI","Noto Sans JP",monospace !important;
+}
+p,.lead,.section-copy,.section-kicker,.price-note,.price-desc,.meta,.small,.empty,.rule,.switch,.back,
+.ticket-meta,.account small,.side-title,.payment-help,.helper,.identity,.welcome p,.muted{
+  color:#3f3f3f !important;
+}
+
+/* Minecraft menu buttons: gray stone, square corners, hard pixel bevel. */
+.btn,.button,.link,.tab,.send,.button-primary,.primary,.btn-gold,.gold,
+button[type="submit"]{
+  border:2px solid #3b3b3b !important;
+  border-radius:0 !important;
+  background:linear-gradient(#cfcfcf 0%,#bdbdbd 48%,#a9a9a9 49%,#bdbdbd 100%) !important;
+  color:#202020 !important;
+  text-shadow:1px 1px 0 #eee !important;
+  box-shadow:inset 2px 2px 0 #f7f7f7,inset -2px -2px 0 #555,3px 3px 0 rgba(0,0,0,.32) !important;
+  font-family:"MS Gothic","ＭＳ ゴシック","Yu Gothic UI","Noto Sans JP",monospace !important;
+  font-weight:700 !important;
+  min-height:38px;
+}
+.btn:hover,.button:hover,.link:hover,.tab:hover,.send:hover,button[type="submit"]:hover{
+  background:linear-gradient(#dcdcdc,#c7c7c7 48%,#b5b5b5 49%,#c7c7c7) !important;
+  border-color:#252525 !important;
+  color:#111 !important;
+  transform:none !important;
+}
+.btn:active,.button:active,.link:active,button[type="submit"]:active{box-shadow:inset 2px 2px 0 #555,inset -2px -2px 0 #f2f2f2,1px 1px 0 rgba(0,0,0,.3) !important;transform:translate(2px,2px) !important;}
+.btn-gold,.gold{background:linear-gradient(#d5d5d5,#bdbdbd) !important;color:#202020 !important;}
+.primary{background:linear-gradient(#d7d7d7,#bcbcbc) !important;color:#202020 !important;}
+.danger{background:linear-gradient(#d7c7c7,#bdaaaa) !important;color:#3b1717 !important;}
+
+/* Inputs match the Minecraft settings fields. */
+input,select,textarea{
+  border:2px solid #555 !important;
+  border-radius:0 !important;
+  background:#e2e2e2 !important;
+  color:#202020 !important;
+  box-shadow:inset 2px 2px 0 #888,inset -2px -2px 0 #fff !important;
+  font-family:"MS Gothic","ＭＳ ゴシック","Yu Gothic UI","Noto Sans JP",monospace !important;
+}
+input:focus,select:focus,textarea:focus{border-color:#333 !important;box-shadow:inset 2px 2px 0 #777,inset -2px -2px 0 #fff,0 0 0 2px rgba(255,255,255,.45) !important;}
+
+/* Status accents stay readable but use Minecraft palette. */
+.success,.ok,.yes,.vip-value{color:#1f6d21 !important;}
+.error,.danger-text{color:#8c2222 !important;}
+.vip-mark,.confirm-mark{background:#7a6b35 !important;color:#fff !important;border:2px solid #443b1d !important;border-radius:0 !important;box-shadow:inset 2px 2px #c8b86b,inset -2px -2px #3f3618 !important;}
+
+/* Chat/message areas: separate blocks instead of translucent overlays. */
+.messages{background:rgba(35,35,35,.82) !important;border:3px solid #555 !important;box-shadow:inset 3px 3px #222,inset -3px -3px #777 !important;}
+.message{border-bottom:2px solid #777 !important;}
+.avatar{border-radius:0 !important;background:#777 !important;border:2px solid #444 !important;box-shadow:inset 2px 2px #aaa,inset -2px -2px #444 !important;}
+.content{font-family:"MS Gothic","ＭＳ ゴシック","Yu Gothic UI","Noto Sans JP",monospace !important;}
+
+/* Progress/tabs become separate buttons rather than one glassy bar. */
+.progress{background:transparent !important;gap:10px !important;border:0 !important;}
+.progress-step{border:2px solid #555 !important;border-radius:0 !important;background:#c6c6c6 !important;color:#333 !important;box-shadow:inset 2px 2px #fff,inset -2px -2px #555,2px 2px #333 !important;}
+.progress-step.current{border-color:#333 !important;background:#d7d7d7 !important;color:#111 !important;}
+.progress-step.done{background:#9fbd8e !important;color:#173b16 !important;}
+.tabs{padding:6px !important;gap:8px !important;background:transparent !important;border:0 !important;box-shadow:none !important;}
+.tab{min-height:34px !important;}
+.tab.active{background:#d7d7d7 !important;color:#111 !important;}
+
+/* Remove decorative modern gradients/glows. */
+body [style*="radial-gradient"]{background:transparent !important;}
+body [class*="promo"]::after,body [class*="overlay"]{opacity:0 !important;}
+
+/* Mobile: keep the same independent-block visual language. */
+@media(max-width:700px){
+  main{width:calc(100% - 22px) !important;margin-top:20px !important;}
+  .grid,.workspace,.hero,.pricing-grid{grid-template-columns:1fr !important;}
+  .card,.panel,.price-card,.plan,.benefit,.step,.confirm-card{padding:16px !important;}
+  header,.header{padding:10px 12px !important;}
+}
+
+</style>
+
+<style id="minecraft-v5-fix">
+@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+:root{--mc-font:'DotGothic16','MS Gothic','ＭＳ ゴシック','Yu Gothic',sans-serif;}
+html,body{font-family:var(--mc-font)!important;}
+body{
+  background:transparent!important;
+  overflow-x:hidden;
+}
+/* Actual uploaded Minecraft video is the page background. */
+.bg-video{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;object-fit:cover!important;z-index:0!important;display:block!important;opacity:1!important;background:#111!important;filter:saturate(.9) brightness(.78)!important;}
+.bg-overlay{position:fixed!important;inset:0!important;z-index:1!important;pointer-events:none!important;display:block!important;background:rgba(0,0,0,.22)!important;opacity:1!important;}
+html{background:transparent!important;}
+body{position:relative!important;isolation:isolate!important;background:transparent!important;}
+/* Keep page content above the video. */
+body>*:not(.bg-video):not(.bg-overlay){position:relative;z-index:2;}
+/* Text is dark; buttons are deliberately light with WHITE text so they never merge visually. */
+.btn,.button,.link,.tab,.send,.button-primary,.primary,.btn-gold,.gold,button[type="submit"]{
+  color:#fff!important;
+  text-shadow:2px 2px 0 #3a3a3a!important;
+  background:linear-gradient(#8b8b8b 0%,#747474 48%,#626262 49%,#747474 100%)!important;
+  border:2px solid #2f2f2f!important;
+  box-shadow:inset 2px 2px 0 #bdbdbd,inset -2px -2px 0 #3b3b3b,3px 3px 0 rgba(0,0,0,.42)!important;
+  font-family:var(--mc-font)!important;
+}
+.btn:hover,.button:hover,.link:hover,.tab:hover,.send:hover,button[type="submit"]:hover{
+  color:#fff!important;background:linear-gradient(#a0a0a0,#888 48%,#707070 49%,#888)!important;
+}
+.btn:active,.button:active,.link:active,button[type="submit"]:active{color:#fff!important;}
+/* Selected/active buttons use Minecraft green, while labels remain white. */
+.tab.active,.hist-tab-btn.active,.count-btn.active,.ticket-link.active{
+  color:#fff!important;text-shadow:2px 2px 0 #27441f!important;
+  background:linear-gradient(#6da24b,#56853a 48%,#476e30 49%,#56853a)!important;
+  border-color:#29451f!important;
+}
+/* Option text remains dark, selected option gets green block + white text. */
+.opt{color:#222!important;background:#bdbdbd!important;}
+.opt .opt-label{color:#222!important;}
+.opt.checked{background:#8fae79!important;border-color:#36592b!important;box-shadow:inset 2px 2px #c7d9bc,inset -2px -2px #49623d,2px 2px #333!important;}
+.opt.checked .opt-label{color:#fff!important;text-shadow:1px 1px #36592b!important;}
+/* Creeper-style check box: green face with dark pixel eyes/mouth. */
+.checkmark{width:22px!important;height:22px!important;border-radius:0!important;border:2px solid #315a24!important;background:#8aa878!important;box-shadow:inset 2px 2px #b8d1a8,inset -2px -2px #49683d!important;position:relative!important;}
+.opt.checked .checkmark{background:#58a33e!important;border-color:#24451b!important;box-shadow:inset 2px 2px #82c66a,inset -2px -2px #315d25!important;}
+.opt.checked .checkmark::after{content:''!important;display:block!important;position:absolute!important;left:3px!important;top:3px!important;width:12px!important;height:12px!important;border:0!important;transform:none!important;background:transparent!important;}
+.opt.checked .checkmark::before{content:'▪ ▪';position:absolute;left:1px;top:-4px;color:#172514;font-family:Arial,sans-serif;font-size:8px;letter-spacing:4px;white-space:nowrap;}
+/* Text and headings use a Japanese-capable pixel font and remain separate from control colors. */
+h1,h2,h3,.card-title,.section-title,.detail-title h2,.chat-head h1,.panel h2,.welcome h1,
+.plan-price,.price,.price-yen,.price-days,.ticket-name,.account strong,.metric strong,.summary strong,
+.logo,.brand,.header h1,.head h1,p,.lead,.meta,.small,.muted,.helper,.identity,.status,.ticket-meta,
+.account small,.side-title,.section-kicker,.section-copy,.price-note,.price-desc,.payment-help,.empty,
+.welcome p,.rule,.switch,.back,label,.opt-label,.field label,input,select,textarea{
+  font-family:var(--mc-font)!important;
+}
+h1,h2,h3,.card-title,.section-title,.detail-title h2,.chat-head h1,.panel h2,.welcome h1,
+.plan-price,.price,.price-yen,.price-days,.ticket-name,.account strong,.metric strong,.summary strong{
+  color:#202020!important;text-shadow:1px 1px 0 #f0f0f0!important;
+}
+p,.lead,.meta,.small,.muted,.helper,.identity,.status,.ticket-meta,.account small,.side-title,
+.section-kicker,.section-copy,.price-note,.price-desc,.payment-help,.empty,.welcome p,.rule,.switch,.back,label{
+  color:#3b3b3b!important;
+}
+/* Make independent controls visibly separated. */
+.btn,.button,.link,.tab,.send,button[type="submit"]{margin:4px!important;}
+.tabs{display:flex!important;gap:8px!important;background:transparent!important;border:0!important;}
+.option-grid{gap:10px!important;}
+.opt{border:2px solid #666!important;box-shadow:inset 2px 2px #eee,inset -2px -2px #555,2px 2px rgba(0,0,0,.25)!important;}
+</style>
+
+
+<style id="mc-video-final-fix">
+html, body { background: transparent !important; }
+body { position: relative !important; isolation: isolate !important; }
+.mc-background-video {
+  position: fixed !important;
+  top: 0 !important; left: 0 !important;
+  width: 100vw !important; height: 100vh !important;
+  min-width: 100vw !important; min-height: 100vh !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: -100 !important;
+  pointer-events: none !important;
+}
+.mc-background-overlay {
+  position: fixed !important; inset: 0 !important;
+  background: rgba(0,0,0,.28) !important;
+  z-index: -90 !important;
+  pointer-events: none !important;
+}
+body > *:not(.mc-background-video):not(.mc-background-overlay) { position: relative; z-index: 1; }
+</style>
+
+<style id="mc-video-fix">
+html, body { background: transparent !important; background-color: transparent !important; }
+body { position: relative !important; min-height: 100vh !important; }
+.mc-background-video {
+  position: fixed !important; inset: 0 !important;
+  width: 100vw !important; height: 100vh !important;
+  min-width: 100vw !important; min-height: 100vh !important;
+  object-fit: cover !important; object-position: center center !important;
+  display: block !important; visibility: visible !important; opacity: 1 !important;
+  z-index: 0 !important; pointer-events: none !important;
+}
+.mc-background-overlay {
+  position: fixed !important; inset: 0 !important;
+  background: rgba(0,0,0,.25) !important;
+  z-index: 1 !important; pointer-events: none !important;
+}
+body > *:not(.mc-background-video):not(.mc-background-overlay) {
+  position: relative !important; z-index: 2 !important;
+}
+</style>
+
+<style id="minecraft-background-visibility-fix">
+/* 背景をしっかり見せる最終調整 */
+.bg-video{filter:saturate(1) brightness(1)!important;}
+.mc-background-overlay{background:rgba(0,0,0,.08)!important;}
+/* 大きな親枠は透明、各カードは半透明にして動画を見せる */
+.app,.shell,.main,.wrap,main,.layout,.workspace,.grid,.hero,.pricing-grid,.benefits,.steps,.compare-wrap,.content,.chat,.sidebar,.panel-group,.section-wrap{
+  background:transparent!important;
+}
+.card,.panel,.price-card,.plan,.benefit,.step,.confirm-card,.account,.trial,.metric,.ticket,.ticket-link,
+.compare-wrap,.faq details,.final,.id,.vip,.codes,.grant,.order-summary,.order-cell,.payment-box,
+.notice,.restriction,.tabs,.dm-head,.conversation,.composer-wrap,.side-title,.summary div,
+.detail,.detail-head,.next-action,.paypay-card,.section-card{
+  background:rgba(198,198,198,.66)!important;
+}
+/* 中の枠まで濃くならないように */
+.card .card,.panel .panel,.section-card .card,.section-card .panel{
+  background:rgba(198,198,198,.48)!important;
+}
+/* 動画を暗くしすぎない */
+body:before{background:linear-gradient(180deg,rgba(34,76,115,.02),rgba(0,0,0,.03) 55%,rgba(0,0,0,.10) 100%)!important;}
+body:after{box-shadow:inset 0 0 70px rgba(0,0,0,.10)!important;}
+</style>
+{% endif %}
+{% if theme_layout == 'simple' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-simple.css') }}?v=27">{% endif %}
+{% if theme_layout == 'dark' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-dark.css') }}?v=30">{% endif %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site-preferences.css') }}?v=30">
+<script src="{{ url_for('static', filename='site-locale.js') }}?v=31"></script>
+</head>
+<body>
+
+<video class="mc-background-video" autoplay muted loop playsinline preload="{{ 'auto' if theme_layout == 'classic' else 'none' }}" aria-hidden="true">
+  <source {% if theme_layout == 'classic' %}src="{{ theme_video_url }}"{% endif %} type="video/mp4">
+</video>
+<div class="mc-background-overlay" aria-hidden="true"></div>
+<script>
+(function(){
+  const v=document.querySelector('.mc-background-video');
+  if(!v) return;
+  v.muted=true; v.setAttribute('muted',''); v.setAttribute('playsinline','');
+  const start=()=>{const p=v.play(); if(p&&p.catch)p.catch(()=>{});};
+  if(v.readyState>=2) start(); else v.addEventListener('canplay',start,{once:true});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden) start();});
+})();
+</script>
+
+<header>
+  <a class="brand" href="/">CatProxyService</a>
+  <div class="spacer"></div>
+  <nav class="nav" aria-label="ページメニュー">
+    <a class="btn hide-mobile" href="/account">マイアカウント</a>
+    {% if user and user.is_vip %}<a class="btn btn-gold" href="/vip">VIPページへ</a>{% elif user %}<a class="btn btn-gold" href="/vip/purchase">購入申請</a>{% else %}<a class="btn" href="/account/login?next=/vip/purchase">ログイン</a><a class="btn btn-gold" href="/account/register?next=/vip/purchase">アカウント作成</a>{% endif %}
+  </nav>
+</header>
+
+<main>
+  <div class="hero">
+    <div>
+      <span class="eyebrow">CatProxyService VIP</span>
+      <h1>回数を気にせず、<br><em>思いどおりに設定。</em></h1>
+      <p class="lead">このサービスはVIPユーザー専用です。VIP契約中のサイトアカウントでログインすると、アカウント作成・代行・複製と各種データ設定を利用できます。</p>
+      <div class="hero-points">
+        <span class="hero-point">使用回数 無制限</span>
+        <span class="hero-point">作成・複製 最大5個</span>
+        <span class="hero-point">詳細な個別指定</span>
+      </div>
+      <div class="hero-actions">
+        {% if user and user.is_vip %}
+        <a class="btn btn-gold" href="/vip">VIP機能を使う →</a>
+        {% else %}
+        <a class="btn btn-gold" href="#plans">プランを選ぶ →</a>
+        <a class="btn" href="#compare">利用できる機能を見る</a>
+        {% endif %}
+      </div>
+    </div>
+    <aside class="plan" id="buy">
+      {% if user and user.is_vip %}<div class="current">✓ このサイトアカウントはVIPです</div>{% endif %}
+      <div class="plan-label">{{ plan_label }}</div>
+      <div class="price">{{ price_label }}</div>
+      <div class="price-note">30・60・90日から選択。申請前に合計金額を確認できます。</div>
+      <ul>
+        <li>アカウント作成・代行・複製を利用</li>
+        <li>有料VIPは利用回数無制限</li>
+        <li>VIP専用の詳細設定を解放</li>
+        <li>同時作成・複製数を最大5個へ拡張</li>
+      </ul>
+      {% if user and user.is_vip %}<a class="btn btn-gold" href="/vip">VIPページを開く</a>{% else %}<a class="btn btn-gold" href="#plans">期間と金額を選ぶ</a>{% endif %}
+    </aside>
+  </div>
+
+  <section id="plans">
+    <div class="section-kicker">CHOOSE A PLAN</div>
+    <h2 class="section-title">期間と金額を先に確認。</h2>
+    <p class="section-copy">どのプランでもVIP機能と使用回数無制限を利用できます。VIP期間は管理者が付与した時点から始まります。</p>
+    <div class="pricing-grid">
+      {% for plan in plans %}<article class="price-card {{ 'recommended' if plan.recommended else '' }}">{% if plan.recommended %}<span class="recommend">おすすめ</span>{% endif %}<div class="price-days">VIP {{ plan.days }}日</div><div class="price-yen">{{ '{:,}'.format(plan.price_yen) }}円</div><p class="price-desc">回数無制限・最大5個・VIP専用の詳細設定・プリセット機能を利用できます。</p><a class="btn {{ 'btn-gold' if plan.recommended else '' }}" href="/vip/purchase?plan={{ plan.days }}">{{ plan.days }}日プランを申請</a></article>{% endfor %}
+    </div>
+    {% if vip_stats.total_grants or vip_stats.active_vip %}<div class="stats-grid"><div class="stat"><strong>{{ vip_stats.active_vip }}</strong><span>現在のVIP契約数</span></div><div class="stat"><strong>{{ vip_stats.grants_30d }}</strong><span>直近30日のVIP付与</span></div><div class="stat"><strong>{{ vip_stats.total_grants }}</strong><span>累計VIP付与</span></div></div>{% endif %}
+  </section>
+
+  <section>
+    <div class="section-kicker">WHY VIP</div>
+    <h2 class="section-title">よく使う人ほど、操作が短くなる。</h2>
+    <p class="section-copy">VIP版ではまとめて適用する項目を細かく決められます。</p>
+    <div class="benefits">
+      <article class="benefit"><div class="benefit-no">01 / UNLIMITED</div><h3>必要なときに利用</h3><p>有料VIPの契約期間中は、使用回数の制限なく利用できます。</p></article>
+      <article class="benefit"><div class="benefit-no">02 / DETAIL</div><h3>項目ごとに細かく指定</h3><p>アイテム、施設、本能玉、キャラ、編成などを用途に合わせて設定できます。</p></article>
+      <article class="benefit"><div class="benefit-no">03 / STAGE</div><h3>ステージ進行も選べる</h3><p>章やステージ、クリア回数などを一括ではなく詳細に調整できます。</p></article>
+      <article class="benefit"><div class="benefit-no">04 / MULTI</div><h3>最大5個をまとめて処理</h3><p>新規アカウント作成と複製を、最大5個まとめて実行できます。</p></article>
+      <article class="benefit"><div class="benefit-no">05 / PRESET</div><h3>設定をプリセット保存</h3><p>よく使う組み合わせを登録し、次回から選び直す手間を減らせます。</p></article>
+      <article class="benefit"><div class="benefit-no">06 / ACCESS</div><h3>サイトアカウントで管理</h3><p>16桁のサイトIDにVIPを付与するため、Discordロールに依存せず利用できます。</p></article>
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="section-kicker">VIP ACCESS</div>
+    <h2 class="section-title">VIPで利用できる機能。</h2>
+    <div class="compare-wrap">
+      <table>
+        <thead><tr><th>機能</th><th>VIP未契約</th><th>VIP</th></tr></thead>
+        <tbody>
+          <tr><td>引き継ぎコード代行</td><td class="limited">利用不可</td><td class="yes">利用可能</td></tr>
+          <tr><td>新規作成・複製</td><td class="limited">利用不可</td><td class="vip-value">最大5個</td></tr>
+          <tr><td>使用回数</td><td class="limited">利用不可</td><td class="vip-value">有料VIPは無制限</td></tr>
+          <tr><td>アイテム・施設の詳細指定</td><td class="limited">利用不可</td><td class="vip-value">個別指定</td></tr>
+          <tr><td>キャラ・編成の詳細設定</td><td class="limited">利用不可</td><td class="vip-value">詳細設定</td></tr>
+          <tr><td>ステージ別の詳細設定</td><td class="limited">利用不可</td><td class="vip-value">章・ステージ別</td></tr>
+          <tr><td>設定プリセット</td><td class="limited">利用不可</td><td class="vip-value">最大10件</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-kicker">HOW TO BUY</div>
+    <h2 class="section-title">購入から利用まで。</h2>
+    <div class="steps">
+      <article class="step"><div class="step-num">1</div><h3>サイトアカウントを作成</h3><p>ユーザー名とパスワードで登録すると、VIP付与に使う16桁のサイトIDが発行されます。</p></article>
+      <article class="step"><div class="step-num">2</div><h3>購入申請を確定</h3><p>購入KEYが発行され、サイトIDを含む申請内容が管理者との専用DMへ自動送信されます。</p></article>
+      <article class="step"><div class="step-num">3</div><h3>DMで案内を確認</h3><p>管理者と購入手続きを進め、VIP付与後は同じサイトアカウントからVIP版を利用できます。</p></article>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-kicker">FAQ</div>
+    <h2 class="section-title">購入前によくある質問。</h2>
+    <div class="faq">
+      <details><summary>サイトアカウントの登録は必要ですか？</summary><p>はい。VIP購入・付与・契約確認に使用します。チャット用のDiscordログインとは別です。</p></details>
+      <details><summary>VIPを付与されたのにVIPページへ入れません。</summary><p>管理者へ送った16桁IDと同じサイトアカウントでログインしてください。マイアカウントで現在のVIP状態を確認できます。</p></details>
+      <details><summary>すでに取得した体験VIPは使えますか？</summary><p>体験VIPの利用権が残っているサイトアカウントは、その残り回数でVIP機能を利用できます。有料VIPは契約期間中、回数無制限です。</p></details>
+      <details><summary>価格や有効期間はどこで確認できますか？</summary><p>このページのプラン一覧と購入確定画面で、30・60・90日の期間と合計金額を確認できます。VIP期間は管理者が付与した時点から始まります。</p></details>
+      <details><summary>VIPなしでも利用できますか？</summary><p>アカウント作成・代行・複製などのサービス機能はVIP限定です。登録・ログイン・VIP購入申請はVIP未契約でも利用できます。</p></details>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="section-kicker">READY?</div>
+    <h2 class="section-title">もっと自由に使うならVIP。</h2>
+    <p>申請後は管理者との専用DMで確認できます。</p>
+    <div class="final-actions">
+      {% if user and user.is_vip %}<a class="btn btn-gold" href="/vip">VIPページへ</a>{% else %}<a class="btn btn-gold" href="#plans">プランを選ぶ</a><a class="btn" href="/account">マイアカウント</a>{% endif %}
+    </div>
+  </section>
+</main>
+
+{% if not user or not user.is_vip %}<div class="mobile-buy"><a class="btn btn-gold" href="#plans">期間と金額を選ぶ</a></div>{% endif %}
+
+<script src="/static/theme-local.js?v=30" defer></script>
+</body>
+</html>

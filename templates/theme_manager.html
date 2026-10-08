@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="{{ ui_language|default('ja') }}" class="theme-{{ theme_layout|default('classic') }}">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>テーマ設定 | CatProxyService</title>
+<style>
+body{margin:0;font-family:"MS Gothic","Yu Gothic",sans-serif;background:#171717;color:#fff;padding:30px;position:relative;isolation:isolate;min-height:100vh;box-sizing:border-box}
+.box{position:relative;z-index:2;max-width:900px;margin:auto;background:#262626;border:3px solid #555;padding:24px;box-shadow:0 8px 0 #111}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}.card{background:#333;border:2px solid #666;padding:18px}.btn,select,input{font:inherit}
+.btn{display:inline-block;background:#777;color:#fff;border:2px solid #aaa;border-bottom-color:#333;border-right-color:#333;padding:12px 18px;cursor:pointer;text-decoration:none}
+.btn:hover{background:#888}select,input[type=file]{width:100%;box-sizing:border-box;padding:10px;margin:8px 0;background:#1d1d1d;color:#fff;border:2px solid #666}
+.ok{background:#173d1c;padding:12px}.err{background:#4b1717;padding:12px}.small{color:#bbb;font-size:13px}.status{margin-top:12px;min-height:22px;color:#9fdf9f}
+.mc-background-video{position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;z-index:0;pointer-events:none}.mc-background-overlay{position:fixed;inset:0;z-index:1;background:rgba(0,0,0,.18);pointer-events:none}
+@media(max-width:700px){body{padding:16px}.box{padding:18px}.row{grid-template-columns:1fr}.btn{padding:10px 14px}}
+</style>
+{% if theme_layout == 'simple' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-simple.css') }}?v=27">{% endif %}
+<script src="{{ url_for('static', filename='theme-local.js') }}?v=30" defer></script>
+<script src="{{ url_for('static', filename='theme-settings.js') }}?v=30" defer></script>
+{% if theme_layout == 'dark' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-dark.css') }}?v=30">{% endif %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site-preferences.css') }}?v=30">
+<script src="{{ url_for('static', filename='site-locale.js') }}?v=31"></script>
+</head>
+<body>
+<video class="mc-background-video" autoplay muted loop playsinline preload="{{ 'auto' if theme_layout == 'classic' else 'none' }}" aria-hidden="true"><source {% if theme_layout == 'classic' %}src="{{ theme_video_url }}"{% endif %} type="video/mp4"></video>
+<div class="mc-background-overlay" aria-hidden="true"></div>
+<div class="box">
+<h1>テーマ設定</h1>
+<p class="small">表示と背景を<strong>全ページまとめて</strong>変更します。設定はこのブラウザだけに保存されます。</p>
+{% if message %}<div class="ok">{{ message }}</div>{% endif %}
+{% if error %}<div class="err">{{ error }}</div>{% endif %}
+<div class="row">
+<section class="card">
+<h2>全ページ共通のテーマ</h2>
+<label for="layout-select">HTML / 表示</label>
+<select id="layout-select">
+<option value="classic" {% if theme_layout == 'classic' %}selected{% endif %}>クラシック — これまでのマイクラ風</option>
+<option value="simple" {% if theme_layout == 'simple' %}selected{% endif %}>シンプル — 白・グレーのすっきりした表示</option>
+<option value="dark" {% if theme_layout == 'dark' %}selected{% endif %}>黒 — 黒・濃いグレーのダーク表示</option>
+</select>
+<label for="language-select">言語 / Language</label>
+<select id="language-select"><option value="ja" {% if ui_language != 'en' %}selected{% endif %}>日本語</option><option value="en" {% if ui_language == 'en' %}selected{% endif %}>English</option></select>
+<label for="video">背景動画</label>
+<select id="video"><option value="">標準背景</option>{% for v in videos %}<option value="{{v}}">{{v}}</option>{% endfor %}</select>
+<p class="small">シンプルの標準背景は無地です。動画を選ぶと、全ページの背景に表示します。</p>
+<button class="btn" id="save" type="button">全ページに適用</button>
+<button class="btn" id="preview" type="button">適用してサイトを見る</button>
+<div id="status" class="status" role="status" aria-live="polite"></div>
+<button class="btn" id="reset-all" type="button">テーマを初期状態に戻す</button>
+</section>
+<section class="card">
+<h2>背景動画を追加</h2>
+<p class="small">動画を追加すると、背景の選択肢に表示されます。追加した動画は他の利用者も選べます。</p>
+<form method="post" enctype="multipart/form-data"><input type="file" name="video" aria-label="追加する背景動画" accept="video/mp4,video/webm,video/ogg,video/quicktime" required><button class="btn" type="submit">動画を追加</button></form>
+</section>
+</div>
+<p><a class="btn" href="/">← サイトへ戻る</a></p>
+</div>
+</body>
+</html>

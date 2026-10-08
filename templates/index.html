@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="{{ ui_language|default('ja') }}" class="theme-{{ theme_layout|default('classic') }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CatProxyService</title>
+{% block theme_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/index-base.css') }}?v=27">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/minecraft-classic.css') }}?v=27">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/index-layout.css') }}?v=27">
+{% endblock %}
+{% if theme_layout == 'simple' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-simple.css') }}?v=27">{% endif %}
+{% if theme_layout == 'dark' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-dark.css') }}?v=30">{% endif %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site-preferences.css') }}?v=30">
+<script src="{{ url_for('static', filename='site-locale.js') }}?v=31"></script>
+</head>
+<body>
+<video class="mc-background-video" autoplay muted loop playsinline preload="{{ 'auto' if theme_layout == 'classic' else 'none' }}" aria-hidden="true">
+  <source {% if theme_layout == 'classic' %}src="{{ theme_video_url }}"{% endif %} type="video/mp4">
+</video>
+<div class="mc-background-overlay" aria-hidden="true"></div>
+<script src="{{ url_for('static', filename='js/minecraft-video.js') }}?v=30"></script>
+<div id="ad-overlay" style="
+  display:none;
+  position:fixed;inset:0;z-index:99999;
+  background:rgba(0,0,0,0.92);
+  backdrop-filter:blur(6px);
+  cursor:pointer;
+" onclick="handleAdClick(event)">
+  <div id="ad-close-btn" onclick="closeAd(event)" style="
+    position:absolute;top:0;right:0;
+    width:80px;height:80px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;z-index:100001;
+  ">
+    <div style="
+      width:44px;height:44px;
+      background:rgba(255,255,255,0.12);
+      border:2px solid rgba(255,255,255,0.3);
+      border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:20px;color:#fff;
+      transition:background 0.15s,border-color 0.15s;
+    " onmouseover="this.style.background='rgba(255,255,255,0.25)';this.style.borderColor='rgba(255,255,255,0.7)'"
+       onmouseout="this.style.background='rgba(255,255,255,0.12)';this.style.borderColor='rgba(255,255,255,0.3)'">
+      ✕
+    </div>
+  </div>
+  <div style="
+    position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+    pointer-events:none;
+    user-select:none;
+    padding:0 24px;
+    width:min(460px,90vw);
+  ">
+    <div style="margin-bottom:24px;">
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="72" height="72" rx="20" fill="#5865F2"/>
+        <path d="M50.4 22.8C47.6 21.5 44.6 20.6 41.5 20.1C41.1 20.8 40.7 21.8 40.4 22.6C37.1 22.1 33.9 22.1 30.6 22.6C30.3 21.8 29.9 20.8 29.5 20.1C26.4 20.6 23.4 21.5 20.6 22.8C15.1 31.1 13.6 39.2 14.3 47.2C17.9 49.9 21.4 51.5 24.8 52.6C25.7 51.4 26.5 50.1 27.2 48.7C25.9 48.2 24.6 47.6 23.4 46.9C23.7 46.7 24 46.4 24.3 46.2C31.5 49.6 39.5 49.6 46.7 46.2C47 46.5 47.3 46.7 47.6 46.9C46.4 47.6 45.1 48.2 43.8 48.7C44.5 50.1 45.3 51.4 46.2 52.6C49.6 51.5 53.1 49.9 56.7 47.2C57.6 37.9 55.2 29.9 50.4 22.8ZM28.7 42.3C26.6 42.3 24.9 40.4 24.9 38.1C24.9 35.8 26.6 33.9 28.7 33.9C30.8 33.9 32.5 35.8 32.5 38.1C32.5 40.4 30.8 42.3 28.7 42.3ZM43.3 42.3C41.2 42.3 39.5 40.4 39.5 38.1C39.5 35.8 41.2 33.9 43.3 33.9C45.4 33.9 47.1 35.8 47.1 38.1C47.1 40.4 45.4 42.3 43.3 42.3Z" fill="white"/>
+      </svg>
+    </div>
+    <div style="
+      font-size:13px;font-weight:600;
+      letter-spacing:0.15em;text-transform:uppercase;
+      color:#5865F2;margin-bottom:10px;
+    ">CatProxyService VIP</div>
+    <div style="
+      font-size:clamp(22px,6vw,32px);
+      font-weight:800;color:#fff;
+      margin-bottom:8px;line-height:1.2;
+    ">回数無制限・詳細設定</div>
+    <div style="
+      font-size:14px;color:rgba(255,255,255,0.55);
+      margin-bottom:32px;
+    ">タップしてVIP版の機能と購入方法を見る</div>
+    <div style="font-size:28px;color:rgba(255,255,255,0.4);animation:adBounce 1.4s ease-in-out infinite;">↓</div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/index-notice.js') }}?v=30"></script>
+<header id="site-header">
+  <a class="logo" href="/" style="text-decoration:none;">CatProxyService</a>
+  <div class="header-spacer"></div>
+  <div class="header-actions">
+    {% if discord_user %}
+    <span class="user-chip">Discord: <span data-i18n-skip>{{ discord_user.username }}</span></span>
+    {% if discord_is_admin %}<a href="/admin/panel" class="btn btn-ghost">管理</a>{% endif %}
+    <a href="/auth/logout" class="btn btn-ghost">Discordログアウト</a>
+    {% else %}
+    <a href="/auth/login?next=/" class="btn btn-ghost">Discordログイン</a>
+    {% endif %}
+    {% if not user or not user.is_vip %}
+    <a href="/vip-guide" class="btn btn-ghost vip-link">★ VIP</a>
+    {% endif %}
+    {% if not user %}
+    <a href="/account/login" class="btn btn-ghost">ログイン</a>
+    <a href="/account/register" class="btn btn-ghost">新規登録</a>
+    {% else %}
+    <a href="/account" class="user-chip" style="text-decoration:none;">
+      <span data-i18n-skip>{{ user.username }}</span>{% if user.is_vip %} <span class="vip-badge">★VIP</span>{% endif %}
+    </a>
+    {% if user.is_vip %}<a href="/vip" class="btn btn-ghost">VIPページ</a>{% endif %}
+    <a href="/account/logout" class="btn btn-ghost">ログアウト</a>
+    {% endif %}
+  </div>
+</header>
+{% if user %}
+<div id="invite-drawer" class="invite-drawer" aria-hidden="true">
+  <div class="invite-drawer-head">
+    <div class="invite-drawer-title">あなたの招待リンク</div>
+    <div class="header-spacer"></div>
+    <button class="copy-btn" onclick="toggleInvitation(false)">閉じる</button>
+  </div>
+  <div class="invite-link-row">
+    <input type="text" id="invitation-link" value="読み込み中..." readonly aria-label="あなたの招待リンク">
+    <button class="btn btn-primary" id="copy-invitation-button" onclick="copyInvitationLink()" disabled>コピー</button>
+  </div>
+  <div id="invitation-message" class="char-note" style="margin-top:9px;">リンクを開いた人が無料版を1回成功させると、招待者に3回・利用者に2回付与されます。週間無料枠と招待報酬を合わせて最大20回まで保有できます。</div>
+</div>
+{% endif %}
+<div id="top-notice" class="top-notice" role="status" aria-live="polite"></div>
+<div id="free-preset-modal" class="free-preset-modal" onclick="if(event.target===this)closeFreePreset()">
+  <div class="free-preset-dialog">
+    <div class="free-preset-head"><strong>Freeプリセット</strong><span>保存可能 1件</span><div class="header-spacer"></div><button class="copy-btn" type="button" onclick="closeFreePreset()">✕</button></div>
+    <input id="free-preset-name" maxlength="40" placeholder="プリセット名">
+    <div id="free-preset-status" class="free-preset-status"></div>
+    <div class="free-preset-buttons"><button class="btn btn-ghost" type="button" onclick="deleteFreePreset()">削除</button><button class="btn btn-ghost" type="button" onclick="saveFreePreset()">登録／上書き</button><button class="btn btn-primary" type="button" onclick="loadFreePresetIntoCurrentTab()">読込</button></div>
+  </div>
+</div>
+<div id="charsearch-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);" onclick="if(event.target===this)closeCharSearch()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(480px,95vw);max-height:85vh;background:var(--surface);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+      <span style="font-size:15px;font-weight:700;color:var(--text);">キャラ番号検索</span>
+      <div style="flex:1"></div>
+      <button onclick="closeCharSearch()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--muted);cursor:pointer;font-size:18px;font-family:inherit;line-height:1;">✕</button>
+    </div>
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="charsearch-input" placeholder="キャラ名を入力..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-family:inherit;font-size:14px;outline:none;transition:border-color 0.15s;" oninput="onCharSearchInput()" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
+      <div id="charsearch-status" style="font-size:11px;color:var(--muted);margin-top:6px;min-height:16px;"></div>
+    </div>
+    <div id="charsearch-results" style="overflow-y:auto;padding:10px 20px;flex:1;"></div>
+  </div>
+</div>
+{% if user %}
+<div id="history-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);" onclick="if(event.target===this)closeHistory()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(820px,95vw);max-height:85vh;background:var(--surface);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+      <span style="font-size:15px;font-weight:700;color:var(--text);">使用履歴</span>
+      <span style="font-size:11px;color:var(--muted);">過去1ヶ月間</span>
+      <div style="flex:1"></div>
+      <button onclick="clearHistory()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--muted);cursor:pointer;font-size:12px;font-family:inherit;" onmouseover="this.style.color='var(--error)';this.style.borderColor='var(--error)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">全削除</button>
+      <button onclick="closeHistory()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--muted);cursor:pointer;font-size:18px;font-family:inherit;line-height:1;">✕</button>
+    </div>
+    <div style="padding:8px 16px;border-bottom:1px solid var(--border);display:flex;gap:6px;">
+      <button class="hist-tab-btn active" onclick="switchHistTab('daiko',this)" style="padding:5px 14px;border-radius:6px;border:1px solid var(--accent);background:var(--tag-bg);color:var(--accent);font-size:12px;cursor:pointer;font-family:inherit;">代行</button>
+      <button class="hist-tab-btn" onclick="switchHistTab('create',this)" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;">アカウント作成</button>
+      <button class="hist-tab-btn" onclick="switchHistTab('clone',this)" style="padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;">複製</button>
+    </div>
+    <div id="history-list" style="overflow-y:auto;padding:16px 20px;flex:1;"></div>
+  </div>
+</div>
+{% endif %}
+<div id="terms-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);" onclick="if(event.target===this)closeTerms()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,95vw);max-height:85vh;background:var(--surface);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+      <span style="font-size:15px;font-weight:700;color:var(--text);">利用規約</span>
+      <div style="flex:1"></div>
+      <button onclick="closeTerms()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--muted);cursor:pointer;font-size:18px;font-family:inherit;line-height:1;">✕</button>
+    </div>
+    <div style="overflow-y:auto;padding:20px 24px;flex:1;font-size:13px;line-height:1.9;color:var(--text);">
+      <div style="margin-bottom:18px;">
+        <div style="font-size:12px;font-weight:700;color:var(--error);margin-bottom:8px;">当サイト及びcatps.comの禁止事項</div>
+        <ul style="padding-left:20px;color:var(--muted);">
+          <li>catps.comの販売を禁ずる</li>
+          <li>catps.comに対するDoS、DDoS及び攻撃行為を禁ずる</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--success);margin-bottom:8px;">許可している行為</div>
+        <ul style="padding-left:20px;color:var(--muted);">
+          <li>このサイトの二次配布</li>
+          <li>このサイトを利用しての金銭等の収益</li>
+        </ul>
+        <div style="margin-top:10px;color:var(--muted);">等は認めています。</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="main">
+  {% if not user %}
+  <section id="month-end-account-nudge" class="month-end-nudge" hidden>
+    <strong>今日はFree無制限デー</strong>
+    <p>無料のサイトアカウントを作成してログインすると、本日中は残り回数を気にせず利用できます。</p>
+    <div class="month-end-actions"><a class="btn btn-primary" href="/account/register?next=/">無料で作成</a><a class="btn btn-ghost" href="/account/login?next=/">ログイン</a></div>
+  </section>
+  {% endif %}
+  <section class="vip-promo" aria-label="VIP版の案内">
+    <div>
+      <div class="vip-promo-kicker">CatProxyService VIP</div>
+      <div class="vip-promo-title">回数を気にせず、もっと細かく設定。</div>
+      <div class="vip-promo-copy">無制限利用・最大5アカウント・ステージやアイテムの詳細指定に対応します。</div>
+      <div class="vip-promo-points">
+        <span class="vip-promo-point">使用回数 無制限</span>
+        <span class="vip-promo-point">作成・複製 最大5個</span>
+        <span class="vip-promo-point">詳細指定を解放</span>
+      </div>
+    </div>
+    <a href="/vip-guide" class="btn btn-primary vip-link vip-promo-action">Freeとの違いを見る →</a>
+  </section>
+  {% if user and not user.is_vip and user.trial_offer_active %}
+  <section id="trial-promo" class="trial-promo" data-expires="{{ user.trial_offer_expires_at }}">
+    <strong>登録後1時間限定：招待1人成立でVIPを1回無料</strong>
+    <p>招待リンクを開いた相手がFree版を1回成功すると、VIP版の実行権が1回付与されます。処理失敗時は消費されません。</p>
+    <span id="trial-countdown" class="trial-countdown">--:--</span>
+    <button class="btn btn-primary" type="button" onclick="toggleInvitation(true)">招待リンクを開く</button>
+  </section>
+  {% endif %}
+  <div class="v19-console">
+    <aside class="v19-mode-rail" aria-label="操作メニュー">
+      <div class="v19-rail-kicker">CONTROL PANEL</div>
+      <div class="v19-rail-title">モード選択</div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('daiko')"><span class="v19-tab-no">01</span><span>引き継ぎコード代行</span></button>
+        <button class="tab" onclick="switchTab('create')"><span class="v19-tab-no">02</span><span>新規アカウント作成</span></button>
+        <button class="tab" onclick="switchTab('clone')"><span class="v19-tab-no">03</span><span>垢複製</span></button>
+      </div>
+      <div class="v19-rail-divider"></div>
+      <div class="v19-rail-title small">ツール</div>
+      <div class="v19-rail-tools">
+        <button class="btn btn-ghost" type="button" onclick="openCharSearch()">キャラ検索</button>
+        {% if user %}<button class="btn btn-ghost" type="button" onclick="openHistory()">履歴</button>{% endif %}
+        {% if user %}<button class="btn btn-ghost" type="button" onclick="toggleInvitation()">招待</button>{% endif %}
+        <a href="/theme-settings" class="btn btn-ghost">テーマ設定</a>
+        <button class="btn btn-ghost" type="button" onclick="openTerms()">利用規約</button>
+      </div>
+    </aside>
+    <section class="v19-workspace">
+  <div id="tab-daiko" class="tab-panel active">
+    <div class="card">
+      <div class="card-title">引き継ぎ情報</div>
+      <div class="row-2">
+        <div class="field">
+          <label>引き継ぎコード</label>
+          <input type="text" id="d_transfer_code" placeholder="1a2b3c4d5" maxlength="9" autocomplete="off"
+                 oninput="sanitizeHexInput(this,9,'d_transfer_code_err')" onblur="checkTransferCode(this,'d_transfer_code_err')">
+          <div class="field-error" id="d_transfer_code_err"></div>
+        </div>
+        <div class="field">
+          <label>認証番号</label>
+          <input type="text" id="d_auth_code" placeholder="1234" maxlength="4" autocomplete="off"
+                 oninput="sanitizeDigitsInput(this,4,'d_auth_code_err')" onblur="checkAuthCode(this,'d_auth_code_err')">
+          <div class="field-error" id="d_auth_code_err"></div>
+        </div>
+      </div>
+    </div>
+    <div id="options-daiko"></div>
+    <div id="custom-amounts-daiko"></div>
+    <div class="card">
+      <div class="card-title">選択中の項目</div>
+      <div id="tags-daiko" class="tag-bar"><span class="tag-empty">何も選択されていません</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-daiko" onclick="submitDaiko()" disabled>代行を実行する</button>
+      <button class="btn btn-ghost" onclick="resetAll('daiko')">↺ リセット</button>
+    </div>
+    <div id="result-daiko" class="result-box">
+      <div class="progress-bar"><div class="progress-fill anim" id="prog-daiko"></div></div>
+      <div class="status-text" id="status-daiko">処理中...</div>
+    </div>
+  </div>
+  <div id="tab-create" class="tab-panel">
+    <div class="card">
+      <div class="card-title">新規アカウント作成</div>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:14px;">Nyanko_newファイルを使って新規アカウントを作成し、選択した内容を適用します。引き継ぎコードは不要です。</p>
+      <div class="field">
+        <label>作成個数</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="count-btn active" onclick="setCount('create',1,this)">1個</button>
+          <button class="count-btn" onclick="setCount('create',2,this)">2個</button>
+        </div>
+      </div>
+    </div>
+    <div id="options-create"></div>
+    <div id="custom-amounts-create"></div>
+    <div class="card">
+      <div class="card-title">選択中の項目</div>
+      <div id="tags-create" class="tag-bar"><span class="tag-empty">何も選択されていません</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-create" onclick="submitCreate()" disabled>アカウントを作成する</button>
+      <button class="btn btn-ghost" onclick="resetAll('create')">↺ リセット</button>
+    </div>
+    <div id="result-create" class="result-box">
+      <div class="progress-bar"><div class="progress-fill anim" id="prog-create"></div></div>
+      <div class="status-text" id="status-create">処理中...</div>
+    </div>
+  </div>
+  <div id="tab-clone" class="tab-panel">
+    <div class="card">
+      <div class="card-title">垢複製</div>
+      <p style="color:var(--muted);font-size:12px;margin-bottom:14px;">引き継ぎコードでセーブデータを取得し、別アカウントとしてコピーします。元アカウントと複製アカウント両方のコードを表示します。</p>
+      <div class="row-2">
+        <div class="field">
+          <label>引き継ぎコード</label>
+          <input type="text" id="cl_transfer_code" placeholder="1a2b3c4d5" maxlength="9" autocomplete="off"
+                 oninput="sanitizeHexInput(this,9,'cl_transfer_code_err')" onblur="checkTransferCode(this,'cl_transfer_code_err')">
+          <div class="field-error" id="cl_transfer_code_err"></div>
+        </div>
+        <div class="field">
+          <label>認証番号</label>
+          <input type="text" id="cl_auth_code" placeholder="1234" maxlength="4" autocomplete="off"
+                 oninput="sanitizeDigitsInput(this,4,'cl_auth_code_err')" onblur="checkAuthCode(this,'cl_auth_code_err')">
+          <div class="field-error" id="cl_auth_code_err"></div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <label>複製個数</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="count-btn active" onclick="setCount('clone',1,this)">1個</button>
+          <button class="count-btn" onclick="setCount('clone',2,this)">2個</button>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-clone" onclick="submitClone()" disabled>複製を実行する</button>
+    </div>
+    <div id="result-clone" class="result-box">
+      <div class="progress-bar"><div class="progress-fill anim" id="prog-clone"></div></div>
+      <div class="status-text" id="status-clone">処理中...</div>
+    </div>
+  </div>
+    </section>
+  </div>
+</div>
+<div id="sticky-action-bar" class="sticky-action-bar">
+  <button type="button" id="sticky-run-button" class="btn btn-primary" onclick="runCurrentTab()">代行を実行</button>
+</div>
+<script src="{{ url_for('static', filename='js/index-app.js') }}?v=30"></script>
+<script src="/static/theme-local.js?v=30" defer></script>
+</body>
+</html>

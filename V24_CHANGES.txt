@@ -1,0 +1,8 @@
+CatProxyService v24
+
+- レイアウト選択に「にゃんこ風」を追加
+- index_nyanko.html / vip_nyanko.html を追加
+- 配置・機能はクラシックHTMLと同一
+- 参考画像の色・太枠・金色ボタン・銅色バー・青緑パネルを参考にしたオリジナルCSS
+- 公式ロゴ/キャラ/背景画像などの素材はコピーしていません
+- 選択は catps_layout Cookie に保存され、そのブラウザだけに適用

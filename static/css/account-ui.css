@@ -1,0 +1,21 @@
+/* Conversation rows have variable height and can be hidden after payment. */
+.chat{display:flex;flex-direction:column}
+.chat>*{flex:0 0 auto}
+.chat>.messages{flex:1 1 0;min-height:100px}
+.chat [hidden],#detail [hidden]{display:none!important}
+#connection-status:empty{display:none}
+#connection-status{font-size:12px;color:#bc4c00}
+.theme-dark #connection-status{color:#ffc27a}
+body:has(.chat) .app{padding-bottom:50px}
+body:has(.chat) #site-preferences{bottom:8px}
+.chat .quick-actions{align-items:center}
+.theme-simple .quick-row,.theme-simple .progress{background:#eef2f7}
+.theme-simple .progress-step.done{color:#18723b}
+#password-dialog{background:#fff;color:#172033}
+.theme-dark #password-dialog{background:#181b20;color:#edf4ff}
+#password-dialog::backdrop{background:#0008}
+@media(max-width:640px){
+  .app>header{flex-wrap:wrap}
+  .app>header .brand{order:-1;flex:1 0 100%}
+  .app>header>.btn{flex-shrink:0;white-space:nowrap!important}
+}

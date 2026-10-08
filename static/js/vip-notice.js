@@ -1,0 +1,4 @@
+(function(){const AD_KEY='nyanko_ad_last_shown';const AD_TTL=12*60*60*1000;const DISCORD='https://discord.gg/zgngnSfbUE';function shouldShowAd(){try{const last=localStorage.getItem(AD_KEY);if(!last)return true;return(Date.now()-parseInt(last,10))>AD_TTL;}catch{return true;}}
+function recordShown(){try{localStorage.setItem(AD_KEY,Date.now().toString());}catch{}}
+window.closeAd=function(e){if(e){e.stopPropagation();e.preventDefault();}
+document.getElementById('ad-overlay').style.display='none';document.body.style.overflow='';};window.handleAdClick=function(e){if(e.target.closest('#ad-close-btn'))return;closeAd();window.open(DISCORD,'_blank','noopener,noreferrer');};window.addEventListener('DOMContentLoaded',function(){if(shouldShowAd()){recordShown();document.getElementById('ad-overlay').style.display='block';document.body.style.overflow='hidden';}});})();

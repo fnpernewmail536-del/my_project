@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="{{ ui_language|default('ja') }}" class="theme-{{ theme_layout|default('classic') }}">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>日本語ログ | CatProxyService</title>
+  <link rel="stylesheet" href="/static/css/site-logs.css?v=31">
+  {% if theme_layout == 'classic' %}<link rel="stylesheet" href="/static/css/minecraft-classic.css?v=26">{% endif %}
+  {% if theme_layout == 'simple' %}<link rel="stylesheet" href="/static/css/site-simple.css?v=27">{% endif %}
+  {% if theme_layout == 'dark' %}<link rel="stylesheet" href="/static/css/site-dark.css?v=30">{% endif %}
+  <link rel="stylesheet" href="/static/css/site-preferences.css?v=30">
+</head>
+<body>
+  {% if theme_layout == 'classic' %}<video class="mc-background-video" autoplay muted loop playsinline aria-hidden="true"><source src="{{ theme_video_url }}" type="video/mp4"></video>{% endif %}
+  <main class="logs-shell">
+    <header><a href="/admin/panel">← 管理パネル</a><a href="/admin/vip">VIP・DM管理</a></header>
+    <section class="panel">
+      <p class="eyebrow">CatProxyService</p><h1>日本語ログ</h1>
+      <p>アカウント作成・ログイン・VIP申請・DM・管理操作・処理結果を確認できます。</p>
+      <form id="log-filter"><label>ユーザー名・サイトID・受付番号<input id="log-query" type="search" maxlength="100" placeholder="検索"></label><label>操作の種類<select id="log-action"><option value="">すべて</option></select></label><button type="submit">検索・更新</button></form>
+      <p id="log-status" role="status" aria-live="polite"></p>
+      <div class="table-wrap"><table><thead><tr><th>日時（日本時間）</th><th>アカウント</th><th>操作した人</th><th>内容</th><th>受付番号</th></tr></thead><tbody id="log-rows"></tbody></table></div>
+      <button id="log-more" type="button" hidden>以前のログを表示</button>
+      <p class="help">更新後の操作から記録されます。パスワード・引き継ぎコード・DM本文・送金リンクはこのログに記録しません。DM本文はVIP管理の会話履歴で確認できます。</p>
+    </section>
+  </main>
+  <script src="/static/account-api.js?v=31" defer></script>
+  <script src="/static/site-logs.js?v=31" defer></script>
+  <script src="/static/theme-local.js?v=30" defer></script>
+</body>
+</html>

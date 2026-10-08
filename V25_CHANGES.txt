@@ -1,0 +1,14 @@
+CatProxyService v25
+
+アクセス確認のローカルHTTP問題を修正。
+
+- 127.0.0.1 / localhost は Secure Cookie を自動で無効化
+- ngrok / catps.com 等の HTTPS は Secure Cookie を自動で有効化
+- SESSION_COOKIE_SECURE=0/1 がある場合は明示設定を優先
+- アクセス確認 nonce を単一セッション値から署名付き10分トークンへ変更
+- favicon 等の並列リクエストで nonce が上書きされる競合を解消
+- アクセス確認レスポンスのキャッシュを強制無効化
+- セッションCookie名を catps_session に変更して古い autocat_session との衝突を回避
+
+起動後は http://127.0.0.1:5001/ からアクセスしてください。
+/api/access/identify は直接開かないでください。
