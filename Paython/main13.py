@@ -27,6 +27,17 @@ import sys
 # main13.py があるディレクトリを Python のインポートパスに追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+import os
+import sys
+
+# main13.py が置いてあるディレクトリを Python のモジュール検索パスに追加
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+# --- ここより下に既存のインポートを記述 ---
+from ACCOUNT.access_guard import register_access_guard
+
 # この下から既存のインポートを記述
 from ACCOUNT.access_guard import register_access_guard
 from ACCOUNT.access_guard import register_access_guard
