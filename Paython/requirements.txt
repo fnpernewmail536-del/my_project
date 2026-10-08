@@ -1,0 +1,4 @@
+Flask
+gunicorn
+discord.py
+python-dotenv
