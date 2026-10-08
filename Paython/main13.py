@@ -156,7 +156,8 @@ VIP_ONLY_SYSTEM_ACTIONS = {
 # =====================
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
-DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "")
+# 第2引数にローカル用URLを入れておく
+DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "http://127.0.0.1:5001/auth/callback")
 DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", "")
 
 def _positive_env_int(name, fallback):
@@ -324,7 +325,9 @@ app = Flask(
     static_folder=os.path.join(base_dir, 'static'),
     template_folder=os.path.join(base_dir, 'templates')
 )
-app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(32))
+
+# 固定のランダム文字列をデフォルト値にしておく
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "your-fixed-secret-key-change-this-12345")
 # VIPのイベント詳細は、全選択時に数千ステージ分の指定を送る。
 # 64KBでは正常な操作でも413になるため、既存機能が収まる上限へ更新する。
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
