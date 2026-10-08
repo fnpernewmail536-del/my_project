@@ -1031,6 +1031,41 @@ def _valid_admin_csrf() -> bool:
     return bool(expected and supplied and secrets.compare_digest(expected, supplied))
 
 
+def _discord_rate_limit_response(remote_response, phase):
+    """Report Discord's retry delay without logging tokens or retrying automatically."""
+    delay = None
+    try:
+        body = remote_response.json()
+        raw = body.get("retry_after") if isinstance(body, dict) else None
+        if raw is not None:
+            number = float(raw)
+            if 0 <= number <= 31536000:
+                delay = int(number) + (number > int(number))
+    except (ValueError, TypeError):
+        pass
+    if delay is None:
+        try:
+            number = float(remote_response.headers.get("Retry-After", ""))
+            if 0 <= number <= 31536000:
+                delay = int(number) + (number > int(number))
+        except (ValueError, TypeError):
+            pass
+    print(f"[ERROR] Discord rate limit: phase={phase}, HTTP 429, retry_after_seconds={delay if delay is not None else 'unknown'}")
+    message = (f"Discordから{delay}秒後の再試行を指定されています。指定時間が過ぎてから再度認証してください。"
+               if delay is not None else "Discordから待ち時間が返されていません。連続した認証操作を止め、時間をおいて再度認証してください。")
+    html = ("<!doctype html><html lang='ja'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+            "<title>Discord認証の一時制限</title><body style='background:#101019;color:#f1f1f1;font:16px/1.8 system-ui;padding:24px'>"
+            "<main style='max-width:600px;margin:40px auto'><h1>Discord認証が一時的に制限されています</h1><p>" + message +
+            "</p><p>ページの再読み込みや認証ボタンの連打は避けてください。</p>"
+            "<p><a style='color:#b9e7ff' href='/'>サイトへ戻る</a></p>"
+            "<p><a style='color:#b9e7ff' href='/auth/login?next=/admin/panel'>待ち時間の後、もう一度認証する</a></p></main></body></html>")
+    response = app.make_response((html, 429))
+    response.headers["Cache-Control"] = "no-store"
+    if delay is not None:
+        response.headers["Retry-After"] = str(delay)
+    return response
+
+
 @app.route("/auth/login")
 @limiter.limit("20 per minute")
 def auth_login():
@@ -1089,6 +1124,8 @@ def auth_callback():
             "grant_type": "authorization_code", "code": code,
             "redirect_uri": DISCORD_REDIRECT_URI,
         }, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=10, proxies=PROXIES)
+        if token_res.status_code == 429:
+            return finish(_discord_rate_limit_response(token_res, "token"))
         if token_res.status_code != 200:
             print(f"[ERROR] Discord token exchange: HTTP {token_res.status_code}")
             return finish(redirect("/?login_error=token"))
@@ -1097,6 +1134,8 @@ def auth_callback():
             return finish(redirect("/?login_error=token"))
         user_res = requests.get(f"{DISCORD_API}/users/@me",
                                 headers={"Authorization": f"Bearer {token}"}, timeout=10, proxies=PROXIES)
+        if user_res.status_code == 429:
+            return finish(_discord_rate_limit_response(user_res, "user"))
         if user_res.status_code != 200:
             print(f"[ERROR] Discord user fetch: HTTP {user_res.status_code}")
             return finish(redirect("/?login_error=user"))
