@@ -21,6 +21,18 @@ from flask_limiter.util import get_remote_address
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+import os
+import sys
+
+# main13.py が置かれているディレクトリ (Paython) を検索パスの最優先に追加
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+# --- 39行目の既存インポート ---
+from ACCOUNT.access_guard import register_access_guard
+
 import os
 import sys
 
