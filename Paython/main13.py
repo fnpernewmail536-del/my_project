@@ -168,4 +168,4 @@ def validate_transfer_auth_codes(data):
     ac = str(data.get("auth_code", "")).strip()
     if not TRANSFER_CODE_RE.match(tc):
         return jsonify({"error": "引き継ぎコードは9桁の16進数（0-9,a-f）で入力してください"}), 400
-    if not AUTH_CODE
+    if not AUTH_CODE:
