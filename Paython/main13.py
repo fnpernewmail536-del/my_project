@@ -21,6 +21,14 @@ from flask_limiter.util import get_remote_address
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import os
+import sys
+
+# main13.py があるディレクトリを Python のインポートパスに追加
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# この下から既存のインポートを記述
+from ACCOUNT.access_guard import register_access_guard
 from ACCOUNT.access_guard import register_access_guard
 from ACCOUNT.account_routes import register_account_routes
 from ACCOUNT.account_store import AccountPermissionError, AccountStore
