@@ -14,11 +14,12 @@ body{margin:0;font-family:"MS Gothic","Yu Gothic",sans-serif;background:#171717;
 @media(max-width:700px){body{padding:16px}.box{padding:18px}.row{grid-template-columns:1fr}.btn{padding:10px 14px}}
 </style>
 {% if theme_layout == 'simple' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-simple.css') }}?v=27">{% endif %}
-<script src="{{ url_for('static', filename='theme-local.js') }}?v=30" defer></script>
-<script src="{{ url_for('static', filename='theme-settings.js') }}?v=30" defer></script>
+<script src="{{ url_for('static', filename='theme-local.js') }}?v=34" defer></script>
+<script src="{{ url_for('static', filename='theme-settings.js') }}?v=34" defer></script>
 {% if theme_layout == 'dark' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-dark.css') }}?v=30">{% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/site-preferences.css') }}?v=30">
-<script src="{{ url_for('static', filename='site-locale.js') }}?v=31"></script>
+<script src="{{ url_for('static', filename='site-locale.js') }}?v=34"></script>
+{% include "site_enhancements.html" %}
 </head>
 <body>
 <video class="mc-background-video" autoplay muted loop playsinline preload="{{ 'auto' if theme_layout == 'classic' else 'none' }}" aria-hidden="true"><source {% if theme_layout == 'classic' %}src="{{ theme_video_url }}"{% endif %} type="video/mp4"></video>
@@ -36,12 +37,14 @@ body{margin:0;font-family:"MS Gothic","Yu Gothic",sans-serif;background:#171717;
 <option value="classic" {% if theme_layout == 'classic' %}selected{% endif %}>クラシック — これまでのマイクラ風</option>
 <option value="simple" {% if theme_layout == 'simple' %}selected{% endif %}>シンプル — 白・グレーのすっきりした表示</option>
 <option value="dark" {% if theme_layout == 'dark' %}selected{% endif %}>黒 — 黒・濃いグレーのダーク表示</option>
+<option value="eva" {% if theme_layout == 'eva' %}selected{% endif %}>エヴァ — 赤・緑の管制画面</option>
+<option value="eva-amber" {% if theme_layout == 'eva-amber' %}selected{% endif %}>エヴァ：アンバー — オレンジの端末表示</option>
 </select>
 <label for="language-select">言語 / Language</label>
 <select id="language-select"><option value="ja" {% if ui_language != 'en' %}selected{% endif %}>日本語</option><option value="en" {% if ui_language == 'en' %}selected{% endif %}>English</option></select>
 <label for="video">背景動画</label>
 <select id="video"><option value="">標準背景</option>{% for v in videos %}<option value="{{v}}">{{v}}</option>{% endfor %}</select>
-<p class="small">シンプルの標準背景は無地です。動画を選ぶと、全ページの背景に表示します。</p>
+<p class="small">背景を選ぶと、すべてのテーマで動画を表示できます。</p>
 <button class="btn" id="save" type="button">全ページに適用</button>
 <button class="btn" id="preview" type="button">適用してサイトを見る</button>
 <div id="status" class="status" role="status" aria-live="polite"></div>
@@ -53,6 +56,7 @@ body{margin:0;font-family:"MS Gothic","Yu Gothic",sans-serif;background:#171717;
 <form method="post" enctype="multipart/form-data"><input type="file" name="video" aria-label="追加する背景動画" accept="video/mp4,video/webm,video/ogg,video/quicktime" required><button class="btn" type="submit">動画を追加</button></form>
 </section>
 </div>
+<section id="bgm-settings"><h2>BGM設定</h2><p class="bgm-hint">曲・音量・繰り返しはこのブラウザに保存されます。ページ移動後は「再生」を押すと続きから再生します。</p></section>
 <p><a class="btn" href="/">← サイトへ戻る</a></p>
 </div>
 </body>

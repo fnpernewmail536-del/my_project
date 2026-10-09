@@ -1,4 +1,3 @@
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, send_from_directory
 import os
 import re
@@ -13,10 +12,6 @@ import threading
 import traceback
 import time
 import requests
-import sys
-import sqlite3
-import functools as _ft
-import urllib.request as _urllib_req
 from datetime import timedelta
 from urllib.parse import urlencode
 from bs4 import BeautifulSoup
@@ -26,16 +21,6 @@ from flask_limiter.util import get_remote_address
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from flask.sessions import SecureCookieSessionInterface
-
-# --- モジュール検索パス設定 ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
-for module_path in (BASE_DIR, PROJECT_ROOT):
-    if module_path not in sys.path:
-        sys.path.insert(0, module_path)
-
-# --- 内部モジュールインポート ---
 from ACCOUNT.access_guard import register_access_guard
 from ACCOUNT.account_routes import register_account_routes
 from ACCOUNT.account_store import AccountPermissionError, AccountStore
@@ -62,6 +47,7 @@ if PROXY_URL:
     os.environ["https_proxy"] = PROXY_URL
 
 # ── requests.Session を継承してプロキシを強制注入 ──
+import functools as _ft
 _orig_requests_Session = requests.Session
 class _ProxiedRequestsSession(_orig_requests_Session):
     def __init__(self, *a, **kw):
@@ -81,6 +67,7 @@ for _mn in ("get", "post", "put", "patch", "delete", "head", "options", "request
     setattr(requests, _mn, _make_proxied(_orig_fn))
 
 # ── urllib.request グローバル opener にプロキシを強制設定 ──
+import urllib.request as _urllib_req
 _urllib_proxy_handler = _urllib_req.ProxyHandler(PROXIES)
 _urllib_req.install_opener(_urllib_req.build_opener(_urllib_proxy_handler))
 
@@ -102,7 +89,7 @@ elif not PROXY_URL:
 # =====================
 MAX_API_KEYS = 5000          # api_keys 辞書の上限
 API_KEY_TTL = 600            # APIキーの有効期間(秒)
-MAX_WORKERS = 10             # ジョブ実行ワーカー数
+MAX_WORKERS = 10              # ジョブ実行ワーカー数
 MAX_INFLIGHT_JOBS = 30       # 同時に受け付ける未完了ジョブ数
 JOB_TIMEOUT = 300            # 進捗が更新されないジョブのタイムアウト(秒)
 JOB_ABSOLUTE_TIMEOUT = 600   # 進捗が続いていても待つ絶対上限(秒)
@@ -113,8 +100,11 @@ MAX_CHARACTER_SETTINGS = 1000  # レアリティ単位・全871体の名前選�
 MAX_COUNT = 5                # 作成/複製の最大個数
 MAX_LEGEND_SELECTIONS = 5000 # レジェンド系の章/星/ステージ選択数上限
 
+# にゃんこ大戦争 JP 15.5.1。通信・新規作成・複製・ゲームデータ参照で
+# 別々の値を使うと、新キャラ枠や第四形態の判定が旧版へ戻るため一元管理する。
 TARGET_GAME_VERSION_NUMBER = 150501
 
+# 通常ページから非表示にするだけでなく、APIへ直接送られてもVIP確認なしでは適用しない。
 VIP_ONLY_SYSTEM_ACTIONS = {
     "hide_character_new",
     "hide_medal_new",
@@ -131,11 +121,11 @@ VIP_ONLY_SYSTEM_ACTIONS = {
 }
 
 # =====================
-# Discord OAuth2
+# Discord OAuth2（チャット・管理者認証用）
 # =====================
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET", "")
-DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "http://127.0.0.1:5001/auth/callback")
+DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI", "")
 DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN", "")
 
 def _positive_env_int(name, fallback):
@@ -144,6 +134,7 @@ def _positive_env_int(name, fallback):
         return value if 1 <= value <= 1_000_000 else fallback
     except (TypeError, ValueError):
         return fallback
+
 
 VIP_PLAN_PRICES = {
     30: _positive_env_int("VIP_PRICE_30", 300),
@@ -161,25 +152,21 @@ OAUTH_SCOPES = "identify"
 # =====================
 TRANSFER_CODE_RE = re.compile(r'^[0-9a-fA-F]{9}$')
 AUTH_CODE_RE = re.compile(r'^\d{4}$')
+# 「時間:分」形式のみ許可。時間は最大4桁(9999まで)、分は0〜59のみ。
 PLAYTIME_RE = re.compile(r'^(\d{1,4}):([0-5]?\d)$')
 OPERATION_ID_RE = re.compile(r'^[A-Za-z0-9]{30}$')
 ADMIN_USER = (os.getenv("ADMIN_USER") or os.getenv("Admin_USER", "")).strip()
 ADMIN_SNAPSHOT_KEY = os.getenv("ADMIN_SNAPSHOT_KEY", "").strip()
 
+
 def validate_transfer_auth_codes(data):
+    """引き継ぎコード(9桁数字)・認証番号(4桁数字)を厳密に検証。問題なければ None。"""
     tc = str(data.get("transfer_code", "")).strip()
     ac = str(data.get("auth_code", "")).strip()
-
     if not TRANSFER_CODE_RE.match(tc):
-        return jsonify({
-            "error": "引き継ぎコードは9桁の16進数（0-9,a-f）で入力してください"
-        }), 400
-
-    if len(ac) != 4 or any(c not in "0123456789" for c in ac):
-        return jsonify({
-            "error": "認証番号は4桁の数字で入力してください"
-        }), 400
-
+        return jsonify({"error": "引き継ぎコードは9桁の16進数（0-9,a-f）で入力してください"}), 400
+    if not AUTH_CODE_RE.match(ac):
+        return jsonify({"error": "認証番号は4桁の数字（0-9）で入力してください"}), 400
     return None
 
 
@@ -973,17 +960,8 @@ def session_owns_job(job_id: str, job: dict | None = None) -> bool:
 # Discordログイン（チャット・管理者）/ サイトアカウント（VIP）
 # =====================
 def current_user():
-    """Discord identity uses its own signed cookie, isolated from polling sessions."""
-    value = request.cookies.get("catps_discord_login_v2", "")
-    if not value:
-        return None
-    try:
-        user = URLSafeTimedSerializer(app.secret_key, salt="catps-discord-login-v2").loads(value, max_age=30 * 86400)
-    except (BadSignature, SignatureExpired):
-        return None
-    if not isinstance(user, dict) or not re.fullmatch(r"\d{15,22}", str(user.get("id", ""))):
-        return None
-    return user
+    """Discordログイン中のチャット用ユーザー。VIP判定には使用しない。"""
+    return session.get("discord_user")
 
 
 def current_site_user():
@@ -1031,143 +1009,101 @@ def _valid_admin_csrf() -> bool:
     return bool(expected and supplied and secrets.compare_digest(expected, supplied))
 
 
-def _discord_rate_limit_response(remote_response, phase):
-    """Report Discord's retry delay without logging tokens or retrying automatically."""
-    delay = None
-    try:
-        body = remote_response.json()
-        raw = body.get("retry_after") if isinstance(body, dict) else None
-        if raw is not None:
-            number = float(raw)
-            if 0 <= number <= 31536000:
-                delay = int(number) + (number > int(number))
-    except (ValueError, TypeError):
-        pass
-    if delay is None:
-        try:
-            number = float(remote_response.headers.get("Retry-After", ""))
-            if 0 <= number <= 31536000:
-                delay = int(number) + (number > int(number))
-        except (ValueError, TypeError):
-            pass
-    print(f"[ERROR] Discord rate limit: phase={phase}, HTTP 429, retry_after_seconds={delay if delay is not None else 'unknown'}")
-    message = (f"Discordから{delay}秒後の再試行を指定されています。指定時間が過ぎてから再度認証してください。"
-               if delay is not None else "Discordから待ち時間が返されていません。連続した認証操作を止め、時間をおいて再度認証してください。")
-    html = ("<!doctype html><html lang='ja'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-            "<title>Discord認証の一時制限</title><body style='background:#101019;color:#f1f1f1;font:16px/1.8 system-ui;padding:24px'>"
-            "<main style='max-width:600px;margin:40px auto'><h1>Discord認証が一時的に制限されています</h1><p>" + message +
-            "</p><p>ページの再読み込みや認証ボタンの連打は避けてください。</p>"
-            "<p><a style='color:#b9e7ff' href='/'>サイトへ戻る</a></p>"
-            "<p><a style='color:#b9e7ff' href='/auth/login?next=/admin/panel'>待ち時間の後、もう一度認証する</a></p></main></body></html>")
-    response = app.make_response((html, 429))
-    response.headers["Cache-Control"] = "no-store"
-    if delay is not None:
-        response.headers["Retry-After"] = str(delay)
-    return response
-
-
 @app.route("/auth/login")
 @limiter.limit("20 per minute")
 def auth_login():
-    if not DISCORD_CLIENT_ID or not DISCORD_CLIENT_SECRET or not DISCORD_REDIRECT_URI:
+    if not DISCORD_CLIENT_ID or not DISCORD_REDIRECT_URI:
         print("[ERROR] Discord OAuth設定が不足しています")
         return redirect("/?login_error=config")
-    nonce = secrets.token_urlsafe(32)
+    state = secrets.token_urlsafe(24)
+    session["oauth_state"] = state
     oauth_next = request.args.get("next", "/")
-    allowed_next = {"/", "/vip", "/admin/panel", "/admin/vip", "/admin/logs"}
-    state = URLSafeTimedSerializer(app.secret_key, salt="catps-discord-oauth-v2").dumps({
-        "nonce": nonce,
-        "next": oauth_next if oauth_next in allowed_next else "/",
-    })
+    allowed_next = {"/", "/admin/panel", "/admin/vip", "/admin/logs"}
+    session["oauth_next"] = oauth_next if oauth_next in allowed_next else "/"
     params = {
-        "client_id": DISCORD_CLIENT_ID, "redirect_uri": DISCORD_REDIRECT_URI,
-        "response_type": "code", "scope": OAUTH_SCOPES, "state": state,
+        "client_id": DISCORD_CLIENT_ID,
+        "redirect_uri": DISCORD_REDIRECT_URI,
+        "response_type": "code",
+        "scope": OAUTH_SCOPES,
+        "state": state,
     }
-    response = redirect(f"{DISCORD_API}/oauth2/authorize?{urlencode(params)}")
-    response.set_cookie("catps_discord_oauth_v2", nonce, max_age=600,
-                        secure=app.session_interface.get_cookie_secure(app),
-                        httponly=True, samesite="Lax", path="/auth")
-    response.headers["Cache-Control"] = "no-store"
-    return response
+    return redirect(f"{DISCORD_API}/oauth2/authorize?{urlencode(params)}")
 
 
 @app.route("/auth/callback")
 @limiter.limit("20 per minute")
 def auth_callback():
-    def finish(response):
-        response.delete_cookie("catps_discord_oauth_v2", path="/auth",
-                               secure=app.session_interface.get_cookie_secure(app),
-                               httponly=True, samesite="Lax")
-        response.headers["Cache-Control"] = "no-store"
-        return response
-
     state = request.args.get("state", "")
-    nonce = request.cookies.get("catps_discord_oauth_v2", "")
-    try:
-        payload = URLSafeTimedSerializer(app.secret_key, salt="catps-discord-oauth-v2").loads(state, max_age=600)
-        expected = payload.get("nonce", "") if isinstance(payload, dict) else ""
-        valid = isinstance(expected, str) and bool(nonce) and bool(expected) and secrets.compare_digest(nonce, expected)
-    except (BadSignature, SignatureExpired):
-        valid = False
-    if not valid:
-        print("[ERROR] Discord OAuth stateを確認できません（専用Cookie・有効期限・固定秘密鍵を確認）")
-        return finish(redirect("/?login_error=state"))
-    if request.args.get("error"):
-        print("[ERROR] Discord OAuth認証がキャンセルされました")
-        return finish(redirect("/?login_error=denied"))
+    expected_state = session.pop("oauth_state", "")
+    if not state or not expected_state or not secrets.compare_digest(state, expected_state):
+        print("[ERROR] Discord OAuth stateが一致しません")
+        return redirect("/?login_error=state")
+
+    oauth_error = request.args.get("error")
+    if oauth_error:
+        print(f"[ERROR] Discord OAuth denied: {oauth_error}")
+        return redirect("/?login_error=denied")
+
     code = request.args.get("code")
     if not code:
-        return finish(redirect("/?login_error=code"))
+        return redirect("/?login_error=code")
+
     try:
-        token_res = requests.post(f"{DISCORD_API}/oauth2/token", data={
-            "client_id": DISCORD_CLIENT_ID, "client_secret": DISCORD_CLIENT_SECRET,
-            "grant_type": "authorization_code", "code": code,
-            "redirect_uri": DISCORD_REDIRECT_URI,
-        }, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=10, proxies=PROXIES)
-        if token_res.status_code == 429:
-            return finish(_discord_rate_limit_response(token_res, "token"))
+        token_res = requests.post(
+            f"{DISCORD_API}/oauth2/token",
+            data={
+                "client_id": DISCORD_CLIENT_ID,
+                "client_secret": DISCORD_CLIENT_SECRET,
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": DISCORD_REDIRECT_URI,
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=10,
+            proxies=PROXIES,
+        )
         if token_res.status_code != 200:
             print(f"[ERROR] Discord token exchange: HTTP {token_res.status_code}")
-            return finish(redirect("/?login_error=token"))
-        token = token_res.json().get("access_token")
-        if not token:
-            return finish(redirect("/?login_error=token"))
-        user_res = requests.get(f"{DISCORD_API}/users/@me",
-                                headers={"Authorization": f"Bearer {token}"}, timeout=10, proxies=PROXIES)
-        if user_res.status_code == 429:
-            return finish(_discord_rate_limit_response(user_res, "user"))
+            return redirect("/?login_error=token")
+
+        access_token = token_res.json().get("access_token")
+        if not access_token:
+            print("[ERROR] Discord token exchange: access_tokenがありません")
+            return redirect("/?login_error=token")
+
+        user_res = requests.get(
+            f"{DISCORD_API}/users/@me",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+            proxies=PROXIES,
+        )
         if user_res.status_code != 200:
             print(f"[ERROR] Discord user fetch: HTTP {user_res.status_code}")
-            return finish(redirect("/?login_error=user"))
-        user = user_res.json()
-        if not re.fullmatch(r"\d{15,22}", str(user.get("id", ""))):
-            return finish(redirect("/?login_error=user"))
-        identity = {"id": str(user["id"]), "username": str(user.get("username", ""))[:100],
-                    "avatar": user.get("avatar"), "is_vip": False}
-        signed = URLSafeTimedSerializer(app.secret_key, salt="catps-discord-login-v2").dumps(identity)
-        target = payload.get("next", "/")
-        if target not in {"/", "/vip", "/admin/panel", "/admin/vip", "/admin/logs"}:
-            target = "/"
-        response = redirect(target)
-        response.set_cookie("catps_discord_login_v2", signed, max_age=30 * 86400,
-                            secure=app.session_interface.get_cookie_secure(app),
-                            httponly=True, samesite="Lax", path="/")
-        return finish(response)
-    except Exception as error:
-        print(f"[ERROR] auth_callback: {type(error).__name__}")
-        return finish(redirect("/?login_error=network"))
+            return redirect("/?login_error=user")
+
+        u = user_res.json()
+        discord_id = u["id"]
+
+        session.permanent = True
+        session["discord_user"] = {
+            "id": discord_id,
+            "username": u.get("username"),
+            "avatar": u.get("avatar"),
+            # DiscordロールはVIP判定に使用しない。チャット互換用に常にFalseを保持する。
+            "is_vip": False,
+        }
+    except Exception as e:
+        print(f"[ERROR] auth_callback: {e}")
+        return redirect("/?login_error=network")
+
+    return redirect(session.pop("oauth_next", "/"))
 
 
 @app.route("/auth/logout")
 @limiter.limit("20 per minute")
 def auth_logout():
     session.pop("discord_user", None)
-    response = redirect("/")
-    for name, path in [("catps_discord_login_v2", "/"), ("catps_discord_oauth_v2", "/auth")]:
-        response.delete_cookie(name, path=path, secure=app.session_interface.get_cookie_secure(app),
-                               httponly=True, samesite="Lax")
-    response.headers["Cache-Control"] = "no-store"
-    return response
+    return redirect("/")
 
 
 @app.route("/auth/status")
@@ -6327,11 +6263,11 @@ THEME_ALLOWED_VIDEO_EXT = {".mp4", ".webm", ".ogg", ".mov"}
 
 def selected_ui_layout():
     value = request.cookies.get("catps_layout", "classic")
-    return value if value in {"classic", "simple", "dark", "eva", "cmd"} else "classic"
+    return value if value in {"classic", "simple", "dark", "eva", "eva-amber"} else "classic"
 
 
 def ui_page_template(classic_name):
-    if selected_ui_layout() in {"simple", "dark", "eva", "cmd"}:
+    if selected_ui_layout() in {"simple", "dark", "eva", "eva-amber"}:
         stem, extension = os.path.splitext(classic_name)
         return stem + "_simple" + extension
     return classic_name
@@ -6364,6 +6300,38 @@ def theme_video_list():
     videos = _theme_videos()
     return jsonify({"videos": [{"name": name, "url": url_for("static", filename="videos/" + name)} for name in videos]})
 
+# BGM is opt-in in each browser. Only files deployed in static/bgm are listed.
+THEME_BGM_DIR = os.path.join(base_dir, "static", "bgm")
+THEME_ALLOWED_BGM_EXT = {".mp3", ".ogg", ".wav", ".m4a", ".aac", ".flac"}
+
+
+def _bgm_tracks():
+    if not os.path.isdir(THEME_BGM_DIR):
+        return []
+    tracks = []
+    for name in sorted(os.listdir(THEME_BGM_DIR), key=str.casefold):
+        if (name.startswith(".") or "/" in name or "\\" in name
+                or os.path.splitext(name)[1].lower() not in THEME_ALLOWED_BGM_EXT):
+            continue
+        path = os.path.join(THEME_BGM_DIR, name)
+        if not os.path.isfile(path) or os.path.islink(path):
+            continue
+        tracks.append({
+            "name": name,
+            "title": os.path.splitext(name)[0],
+            "url": url_for("static", filename="bgm/" + name),
+        })
+    return tracks
+
+
+@app.get("/api/theme/bgm")
+@limiter.limit("120 per minute")
+def theme_bgm_list():
+    response = jsonify({"tracks": _bgm_tracks()})
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @app.route("/theme-settings", methods=["GET", "POST"])
 @app.route("/admin/theme-manager", methods=["GET", "POST"])
 @limiter.limit("30 per minute")
@@ -6389,11 +6357,6 @@ def theme_manager():
 # =====================
 # ページルート（/ と /vip）
 # =====================
-@app.route("/eva")
-def eva_console():
-    return render_template("cps-eva.html")
-
-
 @app.route("/")
 @limiter.limit("5 per second")
 def index():

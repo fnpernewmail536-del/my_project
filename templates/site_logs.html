@@ -8,6 +8,8 @@
   {% if theme_layout == 'simple' %}<link rel="stylesheet" href="/static/css/site-simple.css?v=27">{% endif %}
   {% if theme_layout == 'dark' %}<link rel="stylesheet" href="/static/css/site-dark.css?v=30">{% endif %}
   <link rel="stylesheet" href="/static/css/site-preferences.css?v=30">
+{% include "site_enhancements.html" %}
+<script src="/static/site-locale.js?v=34"></script>
 </head>
 <body>
   {% if theme_layout == 'classic' %}<video class="mc-background-video" autoplay muted loop playsinline aria-hidden="true"><source src="{{ theme_video_url }}" type="video/mp4"></video>{% endif %}
@@ -25,6 +27,6 @@
   </main>
   <script src="/static/account-api.js?v=31" defer></script>
   <script src="/static/site-logs.js?v=31" defer></script>
-  <script src="/static/theme-local.js?v=30" defer></script>
+  <script src="/static/theme-local.js?v=34" defer></script>
 </body>
 </html>

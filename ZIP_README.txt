@@ -28,11 +28,8 @@ v26の抽選範囲はV26_CHANGES.txtに記載しています。
 起動方法
 1. ZIPを解凍します。
 2. my_project フォルダで、これまでと同じ環境を使用して起動します。
-   
-cd C:\Users\a\Desktop\my_project
-set PYTHONPATH=.
-python Paython/main13.py
-
+   set "PYTHONPATH=."
+   python Paython/main13.py
 3. http://127.0.0.1:5001/ を開きます。
 
 既存環境への更新

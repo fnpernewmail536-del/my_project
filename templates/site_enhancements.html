@@ -1,0 +1,7 @@
+{# Shared themes and audio controls. No external CDN or music download on page load. #}
+{% if theme_layout in ['eva', 'eva-amber'] %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site-eva.css') }}?v=34">
+<script src="{{ url_for('static', filename='js/eva-hud.js') }}?v=34" defer></script>
+{% endif %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site-bgm.css') }}?v=34">
+<script src="{{ url_for('static', filename='js/site-bgm.js') }}?v=34" defer></script>

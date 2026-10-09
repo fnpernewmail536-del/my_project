@@ -1,0 +1,22 @@
+#site-preferences{max-width:min(290px,calc(100vw - 24px));max-height:calc(100dvh - 110px);overflow-y:auto}
+#site-preferences[open]{width:290px}
+.bgm-controls{border-top:1px solid #555;padding-top:12px;margin-top:12px;font:12px/1.6 system-ui,sans-serif;color:inherit}
+.bgm-controls h3{font:700 12px/1.5 system-ui,sans-serif;margin:0 0 9px;color:inherit!important;letter-spacing:.08em}
+.bgm-controls label{display:block;color:inherit!important;margin:8px 0!important;font:12px/1.5 system-ui,sans-serif!important}
+.bgm-controls select{display:block;width:100%;min-width:0;margin-top:4px;padding:8px;font:12px system-ui,sans-serif}
+.bgm-buttons{display:flex;gap:7px;margin-top:9px}
+.bgm-controls .bgm-button{flex:1;padding:9px 8px;border:1px solid #666!important;border-radius:4px;background:#252525!important;color:#f5f5f5!important;font:600 12px/1.4 system-ui,sans-serif!important;cursor:pointer;box-shadow:none!important;text-shadow:none!important}
+.bgm-controls .bgm-button:disabled{opacity:.45;cursor:default}
+.bgm-controls .bgm-button:focus-visible{outline:2px solid #8ab4ff;outline-offset:2px}
+.bgm-controls .bgm-button[aria-pressed=true]{border-color:#9ee779!important;color:#baf2a3!important}
+.bgm-volume-row{display:flex;align-items:center;gap:10px}.bgm-volume-row input[type=range]{width:100%;min-width:0;accent-color:var(--green,#8ab4ff);padding:0!important;height:22px;border:0!important;box-shadow:none!important}.bgm-volume-row output{min-width:36px;font-variant-numeric:tabular-nums;text-align:right}
+.bgm-controls .bgm-loop{display:flex!important;align-items:center;gap:8px}.bgm-controls input[type=checkbox]{width:16px;height:16px;accent-color:var(--green,#8ab4ff)}
+.bgm-controls .bgm-status{min-height:19px;margin:9px 0 0;font-size:11px!important;line-height:1.7;color:inherit!important;overflow-wrap:anywhere}
+.bgm-controls .bgm-local{display:block;font-size:11px!important;text-decoration:underline;cursor:pointer;margin-top:7px!important}.bgm-local input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}.bgm-local:focus-within{outline:2px solid #8ab4ff;outline-offset:3px}
+#bgm-settings{margin-top:24px;padding:20px;border:1px solid var(--border,#666);background:var(--surface,#252525);max-width:600px;color:var(--text,#fff)}
+#bgm-settings .bgm-controls{margin:0;border:0;padding:0}#bgm-settings h2{font-size:18px;margin:0 0 10px}#bgm-settings .bgm-hint{font-size:12px;line-height:1.8;color:var(--muted,#bbb)}
+#bgm-settings select{background:var(--bg,#171717);color:var(--text,#fff);border:1px solid var(--border,#666)}
+:is(.theme-eva,.theme-eva-amber) .bgm-controls{border-color:var(--border)}
+:is(.theme-eva,.theme-eva-amber) .bgm-controls .bgm-button{background:var(--bg)!important;border-color:var(--border)!important;color:var(--text)!important;border-radius:0}
+:is(.theme-eva,.theme-eva-amber) .bgm-controls .bgm-button[aria-pressed=true]{color:var(--green)!important;border-color:var(--green)!important}
+@media(max-width:640px){#site-preferences{right:8px;max-width:calc(100vw - 16px)}#site-preferences[open]{width:260px}.bgm-controls .bgm-button{min-height:38px}}

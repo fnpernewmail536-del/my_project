@@ -12,7 +12,8 @@
 {% if theme_layout == 'simple' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-simple.css') }}?v=27">{% endif %}
 {% if theme_layout == 'dark' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-dark.css') }}?v=30">{% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/site-preferences.css') }}?v=30">
-<script src="{{ url_for('static', filename='site-locale.js') }}?v=31"></script>
+<script src="{{ url_for('static', filename='site-locale.js') }}?v=34"></script>
+{% include "site_enhancements.html" %}
 </head>
 <body>
 <video class="mc-background-video" autoplay muted loop playsinline preload="{{ 'auto' if theme_layout == 'classic' else 'none' }}" aria-hidden="true">
@@ -339,6 +340,6 @@
   <button type="button" id="sticky-run-button" class="btn btn-primary" onclick="runCurrentTab()">代行を実行</button>
 </div>
 <script src="{{ url_for('static', filename='js/index-app.js') }}?v=30"></script>
-<script src="/static/theme-local.js?v=30" defer></script>
+<script src="/static/theme-local.js?v=34" defer></script>
 </body>
 </html>

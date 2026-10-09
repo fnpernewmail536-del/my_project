@@ -1,0 +1,112 @@
+/* Original CPS interface, inspired by the reference's control-room graphics. */
+html:is(.theme-eva,.theme-eva-amber){
+  --bg:#111310;--surface:#191d18;--surface2:#222720;--border:#49513b;
+  --accent:#ff563b;--accent2:#ff7b52;--accent-glow:#ff563b20;--green:#8ee952;
+  --text:#f0efdf;--muted:#b6b8a0;--success:#8ee952;--error:#ff8a74;
+  --line:#49513b;--card:#191d18;--blue:#8ee952;--cyan:#8ee952;--gold:#ff734d;--gold2:#ff563b;
+  --tag-bg:#27311f;--tag-border:#678847;--eva-soft:#ff563b12;--eva-rule:#ff563b66;
+  color-scheme:dark;background:var(--bg)!important;
+}
+html.theme-eva-amber{
+  --bg:#160e0a;--surface:#21160f;--surface2:#2f2015;--border:#77552e;
+  --accent:#ffb34c;--accent2:#ffd281;--accent-glow:#ffb34c22;--green:#add660;
+  --muted:#cab998;--line:#77552e;--card:#21160f;--blue:#ffb34c;--cyan:#add660;
+  --gold:#ffb34c;--gold2:#ffcf7d;--tag-bg:#342818;--tag-border:#bd803c;
+  --eva-soft:#ffb34c12;--eva-rule:#ffb34c66;
+}
+:is(.theme-eva,.theme-eva-amber) body{
+  color:var(--text)!important;background-color:var(--bg)!important;
+  background-image:linear-gradient(var(--eva-soft) 1px,transparent 1px),linear-gradient(90deg,var(--eva-soft) 1px,transparent 1px)!important;
+  background-size:40px 40px!important;font-family:Consolas,"SFMono-Regular","Yu Gothic",Meiryo,monospace!important;
+  line-height:1.65;min-height:100vh;
+}
+:is(.theme-eva,.theme-eva-amber) body::before,:is(.theme-eva,.theme-eva-amber) body::after{content:none!important}
+:is(.theme-eva,.theme-eva-amber) .mc-background-video,:is(.theme-eva,.theme-eva-amber) .mc-background-overlay{display:none!important}
+:is(.theme-eva,.theme-eva-amber).has-theme-video body{background-color:transparent!important}
+:is(.theme-eva,.theme-eva-amber).has-theme-video .mc-background-video{display:block!important;position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;z-index:0;pointer-events:none}
+:is(.theme-eva,.theme-eva-amber).has-theme-video .mc-background-overlay{display:block!important;position:fixed;inset:0;z-index:1;background:#111310de!important;pointer-events:none}
+:is(.theme-eva,.theme-eva-amber).has-theme-video body>main,:is(.theme-eva,.theme-eva-amber).has-theme-video body>.main,:is(.theme-eva,.theme-eva-amber).has-theme-video body>.box{position:relative;z-index:2}
+:is(.theme-eva,.theme-eva-amber) header,:is(.theme-eva,.theme-eva-amber) #site-header{
+  background:var(--bg)!important;color:var(--text)!important;border:0!important;border-bottom:2px solid var(--accent)!important;
+  box-shadow:none!important;padding:14px clamp(14px,3vw,32px)!important;backdrop-filter:none!important;
+}
+:is(.theme-eva,.theme-eva-amber) .logo,:is(.theme-eva,.theme-eva-amber) .brand,:is(.theme-eva,.theme-eva-amber) #site-header .logo,
+:is(.theme-eva,.theme-eva-amber) .brand span,:is(.theme-eva,.theme-eva-amber) .logo span{
+  font-family:inherit!important;color:var(--accent)!important;letter-spacing:-.025em!important;text-shadow:none!important;
+}
+:is(.theme-eva,.theme-eva-amber) .main{max-width:1280px!important;padding-top:24px!important;padding-bottom:150px!important}
+:is(.theme-eva,.theme-eva-amber) .app,:is(.theme-eva,.theme-eva-amber) .shell,:is(.theme-eva,.theme-eva-amber) .main,
+:is(.theme-eva,.theme-eva-amber) main,:is(.theme-eva,.theme-eva-amber) .workspace,:is(.theme-eva,.theme-eva-amber) .v19-workspace{background:transparent!important;box-shadow:none!important}
+:is(.theme-eva,.theme-eva-amber) .card,:is(.theme-eva,.theme-eva-amber) .panel,:is(.theme-eva,.theme-eva-amber) .box,
+:is(.theme-eva,.theme-eva-amber) .v19-mode-rail,:is(.theme-eva,.theme-eva-amber) .plan,:is(.theme-eva,.theme-eva-amber) .benefit,
+:is(.theme-eva,.theme-eva-amber) .step,:is(.theme-eva,.theme-eva-amber) .final,:is(.theme-eva,.theme-eva-amber) .result-box,
+:is(.theme-eva,.theme-eva-amber) .code-box,:is(.theme-eva,.theme-eva-amber) .filter-block,:is(.theme-eva,.theme-eva-amber) .character-search-card,
+:is(.theme-eva,.theme-eva-amber) .lineup-editor,:is(.theme-eva,.theme-eva-amber) .ototo-unit-card,
+:is(.theme-eva,.theme-eva-amber) .preset-item,:is(.theme-eva,.theme-eva-amber) .free-preset-dialog{
+  background:var(--surface)!important;color:var(--text)!important;border:1px solid var(--border)!important;
+  border-radius:0!important;box-shadow:inset 3px 0 var(--eva-rule)!important;backdrop-filter:none!important;
+}
+:is(.theme-eva,.theme-eva-amber) .card,:is(.theme-eva,.theme-eva-amber) .panel{padding:20px!important}
+:is(.theme-eva,.theme-eva-amber) h1,:is(.theme-eva,.theme-eva-amber) h2,:is(.theme-eva,.theme-eva-amber) h3,
+:is(.theme-eva,.theme-eva-amber) .card-title,:is(.theme-eva,.theme-eva-amber) .section-title,:is(.theme-eva,.theme-eva-amber) .v19-rail-title{
+  color:var(--text)!important;text-shadow:none!important;font-family:inherit!important;letter-spacing:.025em;
+}
+:is(.theme-eva,.theme-eva-amber) .card-title{color:var(--accent)!important;font-size:13px!important;letter-spacing:.12em!important;border-bottom:1px solid var(--eva-rule);padding-bottom:12px}
+:is(.theme-eva,.theme-eva-amber) .eyebrow,:is(.theme-eva,.theme-eva-amber) .section-kicker,
+:is(.theme-eva,.theme-eva-amber) .benefit-no,:is(.theme-eva,.theme-eva-amber) .v19-rail-kicker{color:var(--green)!important;letter-spacing:.12em!important}
+:is(.theme-eva,.theme-eva-amber) p,:is(.theme-eva,.theme-eva-amber) label,:is(.theme-eva,.theme-eva-amber) .small,
+:is(.theme-eva,.theme-eva-amber) .muted,:is(.theme-eva,.theme-eva-amber) .helper,:is(.theme-eva,.theme-eva-amber) .meta{color:var(--muted)!important;font-family:inherit!important;text-shadow:none!important}
+:is(.theme-eva,.theme-eva-amber) a{color:var(--green)}
+:is(.theme-eva,.theme-eva-amber) input,:is(.theme-eva,.theme-eva-amber) select,:is(.theme-eva,.theme-eva-amber) textarea{
+  background:var(--bg)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:0!important;font-family:inherit!important;box-shadow:none!important;
+}
+:is(.theme-eva,.theme-eva-amber) input:focus,:is(.theme-eva,.theme-eva-amber) select:focus,:is(.theme-eva,.theme-eva-amber) textarea:focus{border-color:var(--green)!important;outline:2px solid var(--green);outline-offset:2px}
+:is(.theme-eva,.theme-eva-amber) .btn,:is(.theme-eva,.theme-eva-amber) .button,:is(.theme-eva,.theme-eva-amber) .tab,
+:is(.theme-eva,.theme-eva-amber) .count-btn,:is(.theme-eva,.theme-eva-amber) .hist-tab-btn,:is(.theme-eva,.theme-eva-amber) button[type=submit]{
+  background:var(--bg)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:0!important;
+  font-family:inherit!important;font-weight:700!important;box-shadow:none!important;text-shadow:none!important;transform:none!important;white-space:normal;
+}
+:is(.theme-eva,.theme-eva-amber) .btn:hover,:is(.theme-eva,.theme-eva-amber) .tab:hover{background:var(--surface2)!important;border-color:var(--green)!important}
+:is(.theme-eva,.theme-eva-amber) .btn-primary,:is(.theme-eva,.theme-eva-amber) .button-primary,
+:is(.theme-eva,.theme-eva-amber) .primary,:is(.theme-eva,.theme-eva-amber) .btn-gold,:is(.theme-eva,.theme-eva-amber) button[type=submit]{background:var(--accent)!important;border-color:var(--accent)!important;color:#170c08!important}
+:is(.theme-eva,.theme-eva-amber) .tab.active,:is(.theme-eva,.theme-eva-amber) .count-btn.active,
+:is(.theme-eva,.theme-eva-amber) .hist-tab-btn.active{background:var(--tag-bg)!important;color:var(--green)!important;border-color:var(--green)!important}
+:is(.theme-eva,.theme-eva-amber) .tabs{background:transparent!important;border:0!important;box-shadow:none!important}
+:is(.theme-eva,.theme-eva-amber) .v19-mode-rail{padding:16px!important;border-top:5px solid var(--accent)!important}
+:is(.theme-eva,.theme-eva-amber) .v19-tab-no{border:1px solid var(--green)!important;color:var(--green)!important;background:var(--bg)!important;border-radius:0!important;box-shadow:none!important;text-shadow:none!important}
+:is(.theme-eva,.theme-eva-amber) .v19-rail-divider{height:7px;background:repeating-linear-gradient(135deg,var(--accent) 0 7px,transparent 7px 14px)!important;box-shadow:none}
+:is(.theme-eva,.theme-eva-amber) .user-chip,:is(.theme-eva,.theme-eva-amber) #site-header .user-chip,
+:is(.theme-eva,.theme-eva-amber) .hero-point,:is(.theme-eva,.theme-eva-amber) .tag{background:var(--tag-bg)!important;border:1px solid var(--tag-border)!important;color:var(--green)!important;box-shadow:none!important;border-radius:0!important}
+:is(.theme-eva,.theme-eva-amber) .v20-vip-badge,:is(.theme-eva,.theme-eva-amber) .vip-badge{background:var(--accent)!important;border-color:var(--accent)!important;color:#170c08!important;border-radius:0!important;box-shadow:none!important}
+:is(.theme-eva,.theme-eva-amber) .opt{background:var(--bg)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:0!important;box-shadow:none!important}
+:is(.theme-eva,.theme-eva-amber) .opt .opt-label{color:var(--text)!important;font-family:inherit!important;text-shadow:none!important}
+:is(.theme-eva,.theme-eva-amber) .opt.checked{background:var(--tag-bg)!important;border-color:var(--green)!important}
+:is(.theme-eva,.theme-eva-amber) .opt.checked .opt-label{color:var(--green)!important}
+:is(.theme-eva,.theme-eva-amber) .checkmark{border:1px solid var(--green)!important;background:var(--bg)!important;border-radius:0!important;box-shadow:none!important}
+:is(.theme-eva,.theme-eva-amber) .opt.checked .checkmark{background:var(--green)!important}
+:is(.theme-eva,.theme-eva-amber) .opt.checked .checkmark::before{content:none!important}
+:is(.theme-eva,.theme-eva-amber) .opt.checked .checkmark::after{content:""!important;display:block!important;width:4px!important;height:7px!important;border:2px solid var(--bg)!important;border-top:0!important;border-left:0!important;background:none!important;transform:rotate(45deg) translate(-1px,-1px)!important}
+:is(.theme-eva,.theme-eva-amber) .sticky-action-bar,:is(.theme-eva,.theme-eva-amber) .mobile-buy{background:var(--bg)!important;border-top:2px solid var(--accent)!important;box-shadow:none!important;backdrop-filter:none!important}
+:is(.theme-eva,.theme-eva-amber) .panel-head,:is(.theme-eva,.theme-eva-amber) .chat-head,:is(.theme-eva,.theme-eva-amber) .detail-head{background:var(--surface2)!important;color:var(--text)!important;border-color:var(--border)!important}
+:is(.theme-eva,.theme-eva-amber) th,:is(.theme-eva,.theme-eva-amber) td{border-color:var(--border)!important}
+:is(.theme-eva,.theme-eva-amber) th{background:var(--surface2)!important;color:var(--green)!important}
+:is(.theme-eva,.theme-eva-amber) .key,:is(.theme-eva,.theme-eva-amber) .ticket-key,
+:is(.theme-eva,.theme-eva-amber) .account-id,:is(.theme-eva,.theme-eva-amber) .code-val{color:var(--green)!important}
+:is(.theme-eva,.theme-eva-amber) .ok,:is(.theme-eva,.theme-eva-amber) .success{background:#1e3018!important;color:#bcf29a!important}
+:is(.theme-eva,.theme-eva-amber) .err,:is(.theme-eva,.theme-eva-amber) .error-msg,:is(.theme-eva,.theme-eva-amber) .error{color:#ffa18a!important}
+:is(.theme-eva,.theme-eva-amber) #site-preferences{background:var(--bg)!important;border-color:var(--accent)!important;border-radius:0!important;box-shadow:4px 4px 0 var(--eva-soft)!important}
+:is(.theme-eva,.theme-eva-amber) #site-preferences select{background:var(--surface)!important;border-color:var(--border)!important;color:var(--text)!important;border-radius:0!important}
+/* Decorative deck: real Japanese time, clearly labeled interface artwork. */
+.eva-command-deck{display:grid;grid-template-columns:1.2fr 1fr .85fr;gap:0;margin:0 0 28px;border:1px solid var(--accent);background:var(--bg);position:relative;color:var(--accent);overflow:hidden;isolation:isolate}
+.eva-command-deck::after{content:"";position:absolute;bottom:0;left:0;right:0;height:7px;background:repeating-linear-gradient(135deg,var(--accent) 0 7px,var(--bg) 7px 14px);pointer-events:none}
+.eva-deck-cell{padding:20px 24px 22px;min-width:0}.eva-deck-cell+.eva-deck-cell{border-left:1px solid var(--eva-rule)}
+.eva-code{font:900 clamp(42px,5vw,70px)/1 Consolas,monospace;letter-spacing:-.05em;color:transparent;-webkit-text-stroke:1px var(--accent)}
+.eva-overline{font:10px/1.5 Consolas,monospace;letter-spacing:.15em;color:var(--green);margin-bottom:8px}.eva-subcode{font:10px/1.6 Consolas,monospace;letter-spacing:.05em;margin-top:12px;color:var(--muted);overflow-wrap:anywhere}
+.eva-deck-title{font-family:"Yu Gothic",Meiryo,sans-serif;font-size:clamp(26px,3vw,36px);font-weight:900;line-height:1.15;letter-spacing:.06em;color:var(--accent)}
+.eva-hexes{display:flex;gap:8px;margin-top:15px}.eva-hex{width:36px;height:34px;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);background:var(--green);color:var(--bg);font:bold 10px/34px Consolas,monospace;text-align:center}
+.eva-clock{font:clamp(23px,3vw,37px)/1.2 Consolas,monospace;color:var(--text);letter-spacing:-.04em;display:block;font-variant-numeric:tabular-nums}
+.eva-wave{height:40px;width:100%;display:block;color:var(--green);margin:12px 0 0;background-image:linear-gradient(var(--eva-soft) 1px,transparent 1px),linear-gradient(90deg,var(--eva-soft) 1px,transparent 1px);background-size:10px 10px}
+.eva-wave path{fill:none;stroke:currentColor;stroke-width:1}.eva-wave .secondary{color:var(--accent);opacity:.55}
+.theme-eva-amber .eva-command-deck{box-shadow:0 0 20px #ffb34c0a}
+@media(max-width:700px){.eva-command-deck{grid-template-columns:1fr 1fr;margin-bottom:20px}.eva-deck-cell{padding:15px 16px 20px}.eva-deck-clock{grid-column:1/-1;border-left:0!important;border-top:1px solid var(--eva-rule);display:flex;align-items:center;justify-content:space-between;gap:16px}.eva-deck-clock .eva-wave{max-width:130px;margin:0}.eva-deck-clock .eva-overline{margin:0 0 4px}.eva-code{font-size:clamp(31px,8vw,46px);white-space:nowrap}.eva-deck-title{font-size:27px}.eva-subcode{font-size:9px}:is(.theme-eva,.theme-eva-amber) .card,:is(.theme-eva,.theme-eva-amber) .panel{padding:16px!important}}
+@media(prefers-reduced-motion:reduce){:is(.theme-eva,.theme-eva-amber) *{scroll-behavior:auto!important}}

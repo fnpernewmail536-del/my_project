@@ -568,7 +568,8 @@ body:after{box-shadow:inset 0 0 70px rgba(0,0,0,.10)!important;}
 {% if theme_layout == 'simple' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-simple.css') }}?v=27">{% endif %}
 {% if theme_layout == 'dark' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-dark.css') }}?v=30">{% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/site-preferences.css') }}?v=30">
-<script src="{{ url_for('static', filename='site-locale.js') }}?v=31"></script>
+<script src="{{ url_for('static', filename='site-locale.js') }}?v=34"></script>
+{% include "site_enhancements.html" %}
 </head>
 <body>
 
@@ -625,6 +626,6 @@ body:after{box-shadow:inset 0 0 70px rgba(0,0,0,.10)!important;}
 <script>window.ACCOUNT_AUTH_CONFIG={{ {'mode':mode,'csrfToken':csrf_token,'next':next_url}|tojson }};</script>
 <script src="/static/account-auth.js?v=31" defer></script>
 
-<script src="/static/theme-local.js?v=30" defer></script>
+<script src="/static/theme-local.js?v=34" defer></script>
 </body>
 </html>
