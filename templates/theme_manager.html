@@ -56,6 +56,14 @@ body{margin:0;font-family:"MS Gothic","Yu Gothic",sans-serif;background:#171717;
 <form method="post" enctype="multipart/form-data"><input type="file" name="video" aria-label="追加する背景動画" accept="video/mp4,video/webm,video/ogg,video/quicktime" required><button class="btn" type="submit">動画を追加</button></form>
 </section>
 </div>
+{% if theme_layout in ['classic', 'eva', 'eva-amber'] %}
+<section class="card" id="theme-animation-preview" data-i18n-skip>
+<h2>{{ 'Theme animation' if ui_language == 'en' else 'テーマのアニメーション' }}</h2>
+<p class="small">{{ 'Preview the effects for 8 seconds without running an operation.' if ui_language == 'en' else '8秒間の演出を試せます。実際の処理は実行しません。' }}</p>
+<button class="btn" id="cps-motion-preview" type="button">{{ 'Try animation' if ui_language == 'en' else 'アニメーションを試す' }}</button>
+<div id="cps-motion-preview-result" style="margin-top:16px" hidden></div>
+</section>
+{% endif %}
 <section id="bgm-settings"><h2>BGM設定</h2><p class="bgm-hint">曲・音量・繰り返しはこのブラウザに保存されます。ページ移動後は「再生」を押すと続きから再生します。</p></section>
 <p><a class="btn" href="/">← サイトへ戻る</a></p>
 </div>
