@@ -60,6 +60,10 @@ body{margin:0;font-family:"MS Gothic","Yu Gothic",sans-serif;background:#171717;
 <section class="card" id="theme-animation-preview" data-i18n-skip>
 <h2>{{ 'Theme animation' if ui_language == 'en' else 'テーマのアニメーション' }}</h2>
 <p class="small">{{ 'Preview the effects for 8 seconds without running an operation.' if ui_language == 'en' else '8秒間の演出を試せます。実際の処理は実行しません。' }}</p>
+{% if theme_layout == 'classic' %}
+<p><label for="cps-mc-effect">{{ 'Completion effect' if ui_language == 'en' else 'マイクラの演出' }}</label>
+<select id="cps-mc-effect"><option value="auto">{{ 'Auto: TNT / Creeper' if ui_language == 'en' else 'おまかせ（TNT・クリーパー）' }}</option><option value="mine">{{ 'Pickaxe / block breaking' if ui_language == 'en' else 'ツルハシ・ブロック破壊' }}</option><option value="tnt">TNT</option><option value="creeper">{{ 'Creeper' if ui_language == 'en' else 'クリーパー' }}</option></select></p>
+{% endif %}
 <button class="btn" id="cps-motion-preview" type="button">{{ 'Try animation' if ui_language == 'en' else 'アニメーションを試す' }}</button>
 <div id="cps-motion-preview-result" style="margin-top:16px" hidden></div>
 </section>
