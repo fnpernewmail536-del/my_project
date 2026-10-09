@@ -20,6 +20,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+from job_timing import TimingStore, advance_timing, timing_profile
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from ACCOUNT.access_guard import register_access_guard
 from ACCOUNT.account_routes import register_account_routes
@@ -370,6 +371,7 @@ try:
 except OSError:
     pass
 USAGE_DB_PATH = os.path.join(BASE_DIR, "count.db")
+job_timing_store = TimingStore(USAGE_DB_PATH)
 try:
     if os.path.exists(USAGE_DB_PATH):
         os.chmod(USAGE_DB_PATH, 0o600)
@@ -755,10 +757,12 @@ def _update_job(job_id: str, changes: dict):
             if job is None:
                 return
             jobs[job_id] = job
-        job.update(changes)
+        advance_timing(job, changes, float(changes.get("updated_at", time.time())))
         snapshot = copy.deepcopy(job)
     _persist_job(job_id, snapshot)
     _settle_job_quota(snapshot)
+    if snapshot.get("status") == "done":
+        job_timing_store.remember(job_id, snapshot)
 
 
 def _settle_job_quota(job: dict | None) -> None:
@@ -1208,6 +1212,9 @@ def safe_character_settings(data):
     """名前選択UIから届いたキャラ・形態・レベル設定を安全な範囲へ丸める。IDは画面表示と同じ1始まり。"""
     out = []
     seen = set()
+    raw_settings = data.get("character_settings", [])
+    if not isinstance(raw_settings, list) or not raw_settings:
+        return out
     try:
         form_counts = {
             character["id"]: character["form_count"]
@@ -1216,7 +1223,7 @@ def safe_character_settings(data):
         }
     except Exception:
         form_counts = {}
-    for raw in data.get("character_settings", [])[:MAX_CHARACTER_SETTINGS]:
+    for raw in raw_settings[:MAX_CHARACTER_SETTINGS]:
         try:
             cat_id = max(1, min(9999, int(raw.get("id"))))
             if form_counts and cat_id not in form_counts:
@@ -1268,7 +1275,7 @@ def safe_character_settings(data):
 def safe_ototo_settings(data):
     """画面の表示レベルを、最新版で実在する城・部品・上限へ丸める。"""
     raw_settings = data.get("ototo_settings")
-    if not isinstance(raw_settings, dict):
+    if not isinstance(raw_settings, dict) or not raw_settings:
         return None
     try:
         cannons = get_ototo_metadata().get("cannons", [])
@@ -3581,6 +3588,13 @@ def safe_lineup_settings(data):
     raw = data.get("lineup_settings")
     if not isinstance(raw, dict):
         return None
+    raw_cats = raw.get("cats", [])
+    if isinstance(raw_cats, list) and not any(cat is not None for cat in raw_cats[:10]):
+        try:
+            lineup = max(1, min(20, int(raw.get("lineup", 1))))
+        except (TypeError, ValueError):
+            lineup = 1
+        return {"lineup": lineup, "cats": [None] * 10, "forms": [None] * 10}
     try:
         characters = get_character_metadata().get("characters", [])
         form_counts = {
@@ -3631,8 +3645,11 @@ def safe_lineup_settings(data):
 def safe_legend_stages(data):
     """章→星→ステージの選択をbcsfeメタデータに照合して正規化する。"""
     raw = data.get("legend_stages", {})
-    if not isinstance(raw, dict):
+    if not isinstance(raw, dict) or not raw:
         return {}
+    # A selected parent with every child cleared must stay selected/empty.
+    if all(isinstance(value, dict) and not value for value in raw.values()):
+        return {key: {} for key in raw if key in LEGEND_SERIES}
     try:
         metadata = get_legend_metadata()
     except Exception as e:
@@ -3688,7 +3705,7 @@ def full_legend_selection(series_key):
 
 def safe_vip_facilities(data):
     raw = data.get("vip_facilities", {})
-    if not isinstance(raw, dict):
+    if not isinstance(raw, dict) or not raw:
         return {}
     try:
         specs = {item["id"]: item for item in get_legend_metadata().get("facilities", [])}
@@ -3711,7 +3728,7 @@ def safe_vip_facilities(data):
 
 def safe_vip_talent_orbs(data):
     raw = data.get("vip_talent_orbs", {})
-    if not isinstance(raw, dict):
+    if not isinstance(raw, dict) or not raw:
         return {}
     try:
         valid_ids = {
@@ -5108,7 +5125,7 @@ def run_job_daiko(job_id, operation_id, transfer_code, auth_code, selected, char
     checkpoint_codes = None
     final_issue_started = False
     try:
-        update({"status": "running", "started_at": time.time(), "log": "サーバーに接続中..."})
+        update({"status": "running", "started_at": time.time(), "timing_stage": "connect", "log": "サーバーに接続中..."})
         _update_operation(operation_id, status="running", error=None)
 
         cc = core.CountryCode.from_code("jp")
@@ -5131,7 +5148,7 @@ def run_job_daiko(job_id, operation_id, transfer_code, auth_code, selected, char
 
         update({
             "transfer_received": True,
-            "log": "引き継ぎ取得済み・復旧用コードを保存中...",
+            "timing_stage": "protect", "log": "引き継ぎ取得済み・復旧用コードを保存中...",
         })
         _save_operation_snapshot(operation_id, handler.save_file)
 
@@ -5159,14 +5176,14 @@ def run_job_daiko(job_id, operation_id, transfer_code, auth_code, selected, char
             "recovery_transfer_code": checkpoint_codes[0],
             "recovery_auth_code": checkpoint_codes[1],
             "admin_recovery_required": False,
-            "log": "復旧用コード保存済み・データを適用中...",
+            "timing_stage": "apply", "log": "復旧用コード保存済み・データを適用中...",
         })
 
         final_logs = _apply_all_segments(handler.save_file, selected, char_list, custom_amounts, custom_playtime, main_story_chapters, vip_items, legend_stages, vip_facilities, vip_talent_orbs, special_stages, character_settings, main_story_stages, event_stage_settings, lineup_settings, ototo_settings, dojo_score_settings, future_score_settings)
         # 最終発行だけ失敗した時は、編集済みデータから管理者が再発行できるよう更新。
         _save_operation_snapshot(operation_id, handler.save_file)
 
-        update({"log": "サーバーに保存中..."})
+        update({"timing_stage": "save", "log": "サーバーに保存中..."})
         final_issue_started = True
         codes = handler.get_codes()
         if codes:
@@ -5254,7 +5271,7 @@ def run_job_create(job_id, selected, char_list, custom_amounts, count=1, custom_
         d["updated_at"] = time.time()
         _update_job(job_id, d)
     try:
-        update({"status": "running", "started_at": time.time(), "log": "アカウントを作成中..."})
+        update({"status": "running", "started_at": time.time(), "timing_stage": "create", "timing_unit": 1, "log": "アカウントを作成中..."})
 
         cc = core.CountryCode.from_code("jp")
         gv = core.GameVersion(TARGET_GAME_VERSION_NUMBER)
@@ -5271,8 +5288,11 @@ def run_job_create(job_id, selected, char_list, custom_amounts, count=1, custom_
         accounts = []
         final_logs = []
 
+        unit_durations = []
         for i in range(count):
-            update({"log": f"アカウントを作成中... ({i+1}/{count})"})
+            unit_started_at = time.time()
+            update({"timing_stage": "create", "timing_unit": i+1,
+                    "log": f"アカウントを作成中... ({i+1}/{count})"})
             save = core.SaveFile(core.Data.from_file(core.Path(path)), cc=cc)
             ensure_latest_save_schema(save)
             handler = ServerHandler(save)
@@ -5284,8 +5304,8 @@ def run_job_create(job_id, selected, char_list, custom_amounts, count=1, custom_
             # その後に画面で選んだ詳細設定を適用するので、従来の編集自由度は維持する。
             preset_logs = apply_account_type_preset(handler.save_file, account_type_key)
 
+            update({"timing_stage": "apply", "log": f"データを適用中... ({i+1}/{count})"})
             if i == 0:
-                update({"log": "データを適用中..."})
                 custom_logs = _apply_all_segments(handler.save_file, selected, char_list, custom_amounts, custom_playtime, main_story_chapters, vip_items, legend_stages, vip_facilities, vip_talent_orbs, special_stages, character_settings, main_story_stages, event_stage_settings, lineup_settings, ototo_settings, dojo_score_settings, future_score_settings)
                 final_logs = [*preset_logs, *custom_logs]
             else:
@@ -5302,12 +5322,16 @@ def run_job_create(job_id, selected, char_list, custom_amounts, count=1, custom_
             if i == 0:
                 final_logs.append("ランクアップセール案内を非表示")
 
+            update({"timing_stage": "save", "log": f"サーバーに保存中... ({i+1}/{count})"})
             codes = handler.get_codes()
             if codes:
                 accounts.append({"tc": codes[0], "ac": codes[1]})
             else:
                 update({"status": "error", "error": f"エラー: 保存失敗 ({i+1}個目)。"})
                 return
+
+            unit_durations.append(time.time() - unit_started_at)
+            update({"timing_completed_units": i+1, "timing_unit_durations": list(unit_durations)})
 
         total_count = increment_usage_count()
         update({
@@ -5389,7 +5413,7 @@ def run_job_clone(job_id, operation_id, transfer_code, auth_code, count=1, acces
     active_copy_handler = None
     copy_recovery_pending = False
     try:
-        update({"status": "running", "started_at": time.time(), "log": "サーバーに接続中..."})
+        update({"status": "running", "started_at": time.time(), "timing_stage": "connect", "log": "サーバーに接続中..."})
         _update_operation(operation_id, status="running", error=None)
 
         cc = core.CountryCode.from_code("jp")
@@ -5408,7 +5432,7 @@ def run_job_clone(job_id, operation_id, transfer_code, auth_code, count=1, acces
             )
             return
 
-        update({"transfer_received": True, "log": "引き継ぎ取得済み・元アカウントを保存中..."})
+        update({"transfer_received": True, "timing_stage": "protect", "log": "引き継ぎ取得済み・元アカウントを保存中..."})
         _save_operation_snapshot(operation_id, handler.save_file)
 
         update({"log": "セーブデータを取得中..."})
@@ -5441,9 +5465,12 @@ def run_job_clone(job_id, operation_id, transfer_code, auth_code, count=1, acces
         })
         count = max(1, min(MAX_COUNT, int(count)))
 
+        unit_durations = []
         for i in range(count):
+            unit_started_at = time.time()
             copy_recovery_pending = True
             update({
+                "timing_stage": "create", "timing_unit": i+1,
                 "log": f"コピーアカウントを作成中... ({i+1}/{count})",
                 "return_pending": True,
             })
@@ -5485,7 +5512,7 @@ def run_job_clone(job_id, operation_id, transfer_code, auth_code, count=1, acces
                     )
                 return
 
-            update({"log": f"コピーアカウントを保存中... ({i+1}/{count})"})
+            update({"timing_stage": "save", "log": f"コピーアカウントを保存中... ({i+1}/{count})"})
             _save_operation_snapshot(operation_id, active_copy_handler.save_file)
             copy_codes = active_copy_handler.get_codes()
             if not copy_codes:
@@ -5502,7 +5529,9 @@ def run_job_clone(job_id, operation_id, transfer_code, auth_code, count=1, acces
                 return
             copies.append({"tc": copy_codes[0], "ac": copy_codes[1]})
             copy_recovery_pending = False
-            update({"return_pending": False, "copies": copy.deepcopy(copies)})
+            unit_durations.append(time.time() - unit_started_at)
+            update({"return_pending": False, "copies": copy.deepcopy(copies),
+                    "timing_completed_units": i+1, "timing_unit_durations": list(unit_durations)})
             # このコピーは返却済みなので、次のコピー作成中は元アカウントを復旧対象に戻す。
             _save_operation_snapshot(operation_id, handler.save_file)
             active_copy_handler = None
@@ -5799,6 +5828,7 @@ def api_run_daiko():
         _create_job(job_id, {"status": "pending", "log": "待機中...",
                              "site_account_id": session.get("site_account_id"),
                              "operation_id": operation_id, "operation_type": "daiko",
+                             **timing_profile(data, "daiko", 1),
                              "job_access_hash": job_access_hash,
                              "quota_reservation_id": quota_reservation_id,
                              "trial_vip_reservation_id": trial_vip_reservation_id,
@@ -5914,7 +5944,7 @@ def api_run_create():
                              "quota_reservation_id": quota_reservation_id,
                              "trial_vip_reservation_id": trial_vip_reservation_id,
                              "error": None, "transfer_code": None, "auth_code": None,
-                             "operation_type": "create", "applied": [], "accounts": [], "created_at": now, "updated_at": now})
+                             "operation_type": "create", **timing_profile(data, "create", count), "applied": [], "accounts": [], "created_at": now, "updated_at": now})
     except Exception:
         _discard_unstarted_job(job_id)
         _refund_unattached_quota(quota_reservation_id)
@@ -5953,6 +5983,7 @@ def api_run_clone():
     if not is_vip_confirmed:
         return vip_required_response()
 
+    count = safe_count(data, MAX_COUNT if is_vip_confirmed else 2)
     job_id = str(uuid.uuid4())
     job_token, job_access_hash = _new_job_access_token()
     operation_id = _safe_operation_id(data)
@@ -5983,6 +6014,7 @@ def api_run_clone():
         _create_job(job_id, {"status": "pending", "log": "待機中...",
                              "site_account_id": session.get("site_account_id"),
                              "operation_id": operation_id, "operation_type": "clone",
+                             **timing_profile(data, "clone", count),
                              "job_access_hash": job_access_hash,
                              "quota_reservation_id": quota_reservation_id,
                              "trial_vip_reservation_id": trial_vip_reservation_id,
@@ -6001,7 +6033,6 @@ def api_run_clone():
         )
         return jsonify({"error": "処理を開始できませんでした"}), 503
     register_job_to_session(job_id)
-    count = safe_count(data, MAX_COUNT if is_vip_confirmed else 2)
     try:
         executor.submit(
             run_job_clone,
@@ -6036,6 +6067,7 @@ def api_job_status(job_id):
     job.pop("job_access_hash", None)
     job.pop("quota_reservation_id", None)
     job.pop("trial_vip_reservation_id", None)
+    job["timing"] = job_timing_store.estimate(job)
     return jsonify(job)
 
 
