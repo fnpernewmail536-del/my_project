@@ -10,3 +10,5 @@ bcsfe
 pkce
 curl-cffi
 pywebpush
+libsql==0.1.11
+

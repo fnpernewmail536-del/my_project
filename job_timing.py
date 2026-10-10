@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import sqlite3
+from db_storage import connect as database_connect
 import statistics
 import threading
 import time
@@ -95,7 +96,7 @@ class TimingStore:
 
     @contextmanager
     def _connect(self):
-        conn = sqlite3.connect(self.db_path, timeout=1)
+        conn = database_connect(self.db_path, timeout=1)
         try:
             if not self.ready:
                 conn.execute("""CREATE TABLE IF NOT EXISTS job_timing_samples (
@@ -229,3 +230,4 @@ class TimingStore:
                 "historical_error_seconds": round(error, 1) if sample_count >= 3 and error is not None else None,
                 "confidence": confidence, "completed_units": completed, "total_units": count,
                 "stage": job.get("timing_stage", "waiting"), "profile": job.get("timing_profile", "")}
+
