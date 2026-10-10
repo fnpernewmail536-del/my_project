@@ -6,14 +6,14 @@ CatProxyService v31 — VIP日数・ログイン保存・購入DM・日本語ロ
 3. このZIPは別のフォルダーに解凍します。
 4. 解凍した次のファイル・フォルダーを、使用中のプロジェクトへコピーします。
    ・ACCOUNT フォルダー内の .py ファイル
-   ・Paython/main13.py
-   ・templates フォルダー
+   ・main13.py
+   ・HTML フォルダー
    ・static フォルダー
    ・V31_CHANGES.txt
    使用中の .env、*.db、*.db-wal、*.db-shm は上書きしないでください。
    このZIPに含まれるデータは、修正元ZIP時点のものです。
 5. いつもの起動コマンドでサーバーを再起動し、ブラウザーを再読み込みします。
-   python Paython/main13.py
+   python main13.py
    データベースの追加項目は起動時に自動で作成します。
 
 【VIP日数】

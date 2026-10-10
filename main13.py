@@ -12,6 +12,7 @@ import unicodedata
 import uuid
 import secrets
 import hashlib
+from importlib.metadata import PackageNotFoundError, version as package_version
 import threading
 import traceback
 import time
@@ -3096,8 +3097,24 @@ def get_game_update_status():
                 "character_data_version": state["characters"]["data_version"],
                 "rank_gift_data_version": state["rank_gifts"]["data_version"],
                 "character_count": sum(c.get("selectable", True) for c in state["characters"]["characters"]),
+                "save_runtime": get_save_runtime_status(),
                 "last_checked_at": state["last_checked_at"], "next_check_at": state["next_check_at"],
                 "status": state["status"], "interval_seconds": GAME_UPDATE_INTERVAL}
+
+
+def get_save_runtime_status():
+    """秘密値・内部パスを含めず、実際に使う保存実装を確認する。"""
+    module = core.SaveFile.__module__
+    runtime_version = None
+    if module.startswith("bcsfe."):
+        try:
+            runtime_version = package_version("bcsfe")
+        except PackageNotFoundError:
+            pass
+    return {"serializer_module": module,
+            "serializer_version": runtime_version,
+            "save_version_policy": "preserve_source",
+            "compatibility_patch": "2026-10-10-source-version-1"}
 
 
 def get_character_metadata():
@@ -3613,17 +3630,13 @@ def _ensure_latest_stage_slots(save, metadata=None):
 
 
 def ensure_latest_save_schema(save, target_version_number=None):
-    """旧テンプレートを対象版へ補完し、新しい実機の版数は保持する。"""
+    """長さ付き配列を補完する。保存形式の版数は元データから変更しない。"""
     if not hasattr(save, "_schema_source_game_version_number"):
         save._schema_source_game_version_number = save.game_version.game_version
     if not hasattr(save, "_schema_target_game_version_number"):
-        # 開始後に更新を検出しても、このジョブの通信・保存版数は途中で切り替えない。
-        save._schema_target_game_version_number = max(
-            save.game_version.game_version,
-            target_version_number if target_version_number is not None else get_target_game_version_number(),
-        )
-    if save.game_version.game_version < save._schema_target_game_version_number:
-        save.set_gv(core.GameVersion(save._schema_target_game_version_number))
+        # ストアの版数は保存形式への移行が可能なことを保証しない。
+        # 最新版はダウンロード開始時の通信に使い、保存・発行は元データの版数を使う。
+        save._schema_target_game_version_number = save.game_version.game_version
     # BCSFE 3.6.0で15.5.0から追加された保存フィールド。
     if not hasattr(save, "ub39"):
         save.ub39 = False
@@ -5613,7 +5626,7 @@ def run_job_daiko(job_id, operation_id, transfer_code, auth_code, selected, char
             "transfer_received": True,
             "timing_stage": "protect", "log": "引き継ぎ取得済み・復旧用コードを保存中...",
         })
-        handler.save_file._schema_target_game_version_number = max(gv.game_version, handler.save_file.game_version.game_version)
+        handler.save_file._schema_target_game_version_number = handler.save_file.game_version.game_version
         _save_operation_snapshot(operation_id, handler.save_file)
 
         # 入力コードはfrom_codes成功時点で消費される。編集・保存中に
@@ -5897,7 +5910,7 @@ def run_job_clone(job_id, operation_id, transfer_code, auth_code, count=1, acces
             return
 
         update({"transfer_received": True, "timing_stage": "protect", "log": "引き継ぎ取得済み・元アカウントを保存中..."})
-        handler.save_file._schema_target_game_version_number = max(gv.game_version, handler.save_file.game_version.game_version)
+        handler.save_file._schema_target_game_version_number = handler.save_file.game_version.game_version
         _save_operation_snapshot(operation_id, handler.save_file)
 
         update({"log": "セーブデータを取得中..."})

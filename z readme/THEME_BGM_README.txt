@@ -19,8 +19,8 @@ MP3がおすすめです。対応コーデックはブラウザによって異�
 
 例:
 my_project/
-  Paython/main13.py
-  templates/site_enhancements.html
+  main13.py
+  HTML/site_enhancements.html
   static/bgm/01-control-room.mp3
   static/bgm/02-night-terminal.mp3
 
@@ -53,9 +53,9 @@ Renderで自動デプロイしていない場合:
 Manual Deploy → Deploy latest commit
 
 ■ 主な追加・変更
-Paython/main13.py: 2つのテーマと /api/theme/bgm の曲一覧。
-templates/site_enhancements.html: 全ページ共通のテーマ・BGM読み込み。
-templates/theme_manager.html: テーマ選択肢とBGM設定欄。
+main13.py: 2つのテーマと /api/theme/bgm の曲一覧。
+HTML/site_enhancements.html: 全ページ共通のテーマ・BGM読み込み。
+HTML/theme_manager.html: テーマ選択肢とBGM設定欄。
 static/css/site-eva.css: 赤・緑 / アンバーの2テーマ。
 static/js/eva-hud.js: 端末表示と日本標準時。
 static/css/site-bgm.css / static/js/site-bgm.js: BGMプレイヤー。
