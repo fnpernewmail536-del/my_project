@@ -18,5 +18,9 @@ render.yamlとProcfileは上記の起動入口を使用します。Gunicorn設�
 このZIPには元ZIPのDBとバックアップを移動して含めています。元ZIPに実際の.envはありません。
 既存環境を更新する場合は、使用中のDBを停止・バックアップして移行し、同梱DBで上書きしないでください。
 移動先はLAYOUT_README.txtに記載しています。DBとBACKUPはGitの除外対象です。
-Renderのデータ永続化は今回の構成変更では対応していません。
+Render無料版でデータを保持するにはTursoの外部DBを設定してください。
+設定手順と確認方法は [無料DBの設定手順](z%20readme/FREE_DATABASE_SETUP.md) を参照してください。
+TURSO_DATABASE_URL・TURSO_AUTH_TOKEN設定時は、全アプリDBを同じ外部DBへ保存します。
+両方が未設定の場合はローカルSQLiteを使うため、Renderの停止・再起動ではデータを保持できません。
 実際のRender環境へのデプロイとゲーム通信の検証は未実施です。
+

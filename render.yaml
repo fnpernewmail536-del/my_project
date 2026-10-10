@@ -2,11 +2,18 @@ services:
   - type: web
     name: catproxyservice
     runtime: python
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: python -m gunicorn --config gunicorn.conf.py wsgi:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.7
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: REQUIRE_PERSISTENT_DB
+        value: "1"
       - key: FLASK_SECRET_KEY
         sync: false
       - key: ADMIN_SNAPSHOT_KEY
@@ -19,3 +26,4 @@ services:
         sync: false
       - key: PUBLIC_BASE_URL
         sync: false
+

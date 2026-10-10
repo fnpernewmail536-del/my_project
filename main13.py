@@ -26,6 +26,7 @@ from flask_limiter.util import get_remote_address
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from job_timing import TimingStore, advance_timing, timing_profile
+from db_storage import connect as database_connect, remote_enabled
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from ACCOUNT.access_guard import register_access_guard
 from ACCOUNT.account_routes import register_account_routes
@@ -40,6 +41,11 @@ from free_usage import (
 )
 
 load_dotenv()
+
+if remote_enabled():
+    print("[DATABASE] Tursoの永続DBを使用します")
+elif os.getenv("RENDER"):
+    print("[DATABASE WARNING] Turso未設定。ローカルDBは停止・再起動時に失われます")
 
 # =====================
 # プロキシ設定（全通信共通）
@@ -375,7 +381,7 @@ JOBS_TTL = 60 * 30
 OPERATION_RETENTION = 2 * 24 * 60 * 60  # 受付IDと失敗セーブは48時間で失効
 
 # =====================
-# 使用回数カウンター（代行・作成・複製の成功回数を全種合算。count.dbに永続化し再起動後も保持）
+# 使用回数カウンター（全種合算。Turso設定時は外部DB、ローカルではcount.dbに保存）
 # =====================
 import sqlite3
 
@@ -435,51 +441,41 @@ def _process_invitation_vip_trials() -> None:
             print(f"[VIP TRIAL] grant failed: {type(exc).__name__}")
 
 
+@contextmanager
 def _usage_db_connect():
-    conn = sqlite3.connect(USAGE_DB_PATH, timeout=10, check_same_thread=False)
-    conn.execute("""
+    conn = database_connect(USAGE_DB_PATH, timeout=10, check_same_thread=False)
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+with _usage_db_connect() as _usage_init_conn:
+    _usage_init_conn.execute("""
         CREATE TABLE IF NOT EXISTS usage_count (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             count INTEGER NOT NULL DEFAULT 0
         )
     """)
-    conn.execute("INSERT OR IGNORE INTO usage_count (id, count) VALUES (1, 0)")
-    conn.commit()
-    return conn
+    _usage_init_conn.execute("INSERT OR IGNORE INTO usage_count (id, count) VALUES (1, 0)")
 
-
-_usage_db_conn = _usage_db_connect()
 try:
     os.chmod(USAGE_DB_PATH, 0o600)
 except OSError:
     pass
 
 
-# ジョブ状態はメモリだけだと、Gunicorn等の別ワーカーに
-# /api/job が割り当てられた時やワーカー再起動後に404になる。
-# count.db内にJSONとして保存し、プロセス間で共有する。
+# 各保存処理は同じ外部DBへ接続。スキーマ作成は起動時だけ行う。
 @contextmanager
 def _job_db_connect():
-    conn = sqlite3.connect(USAGE_DB_PATH, timeout=10, check_same_thread=False)
+    conn = database_connect(USAGE_DB_PATH, timeout=10, check_same_thread=False)
     try:
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS background_jobs (
-                job_id TEXT PRIMARY KEY,
-                status TEXT NOT NULL,
-                payload TEXT NOT NULL,
-                created_at REAL NOT NULL,
-                updated_at REAL NOT NULL
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS api_request_keys (
-                api_key TEXT PRIMARY KEY,
-                created_at REAL NOT NULL,
-                used INTEGER NOT NULL DEFAULT 0
-            )
-        """)
-        conn.commit()
+        if not getattr(conn, "is_remote", False):
+            conn.execute("PRAGMA journal_mode=WAL")
         yield conn
         conn.commit()
     except Exception:
@@ -490,32 +486,30 @@ def _job_db_connect():
 
 
 with _job_db_connect() as _job_init_conn:
-    pass
+    _job_init_conn.execute("""
+        CREATE TABLE IF NOT EXISTS background_jobs (
+            job_id TEXT PRIMARY KEY,
+            status TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        )
+    """)
+    _job_init_conn.execute("""
+        CREATE TABLE IF NOT EXISTS api_request_keys (
+            api_key TEXT PRIMARY KEY,
+            created_at REAL NOT NULL,
+            used INTEGER NOT NULL DEFAULT 0
+        )
+    """)
 
 
 @contextmanager
 def _operation_db_connect():
-    conn = sqlite3.connect(OPERATION_DB_PATH, timeout=10, check_same_thread=False)
+    conn = database_connect(OPERATION_DB_PATH, timeout=10, check_same_thread=False)
     try:
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS operation_records (
-                operation_id TEXT PRIMARY KEY,
-                job_id TEXT NOT NULL UNIQUE,
-                operation_type TEXT NOT NULL,
-                status TEXT NOT NULL,
-                error TEXT,
-                recovery_status TEXT NOT NULL DEFAULT 'not_needed',
-                snapshot BLOB,
-                reissue_result BLOB,
-                created_at REAL NOT NULL,
-                updated_at REAL NOT NULL
-            )
-        """)
-        columns = {row[1] for row in conn.execute("PRAGMA table_info(operation_records)")}
-        if "reissue_result" not in columns:
-            conn.execute("ALTER TABLE operation_records ADD COLUMN reissue_result BLOB")
-        conn.commit()
+        if not getattr(conn, "is_remote", False):
+            conn.execute("PRAGMA journal_mode=WAL")
         yield conn
         conn.commit()
     except Exception:
@@ -526,11 +520,28 @@ def _operation_db_connect():
 
 
 with _operation_db_connect() as _operation_init_conn:
-    pass
+    _operation_init_conn.execute("""
+        CREATE TABLE IF NOT EXISTS operation_records (
+            operation_id TEXT PRIMARY KEY,
+            job_id TEXT NOT NULL UNIQUE,
+            operation_type TEXT NOT NULL,
+            status TEXT NOT NULL,
+            error TEXT,
+            recovery_status TEXT NOT NULL DEFAULT 'not_needed',
+            snapshot BLOB,
+            reissue_result BLOB,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        )
+    """)
+    columns = {row[1] for row in _operation_init_conn.execute("PRAGMA table_info(operation_records)")}
+    if "reissue_result" not in columns:
+        _operation_init_conn.execute("ALTER TABLE operation_records ADD COLUMN reissue_result BLOB")
 try:
     os.chmod(OPERATION_DB_PATH, 0o600)
 except OSError:
     pass
+
 
 threading.Thread(target=cleanup_api_keys, daemon=True).start()
 
@@ -806,16 +817,15 @@ def _settle_job_quota(job: dict | None) -> None:
 
 
 def get_usage_count() -> int:
-    with usage_count_lock:
-        row = _usage_db_conn.execute("SELECT count FROM usage_count WHERE id = 1").fetchone()
+    with usage_count_lock, _usage_db_connect() as conn:
+        row = conn.execute("SELECT count FROM usage_count WHERE id = 1").fetchone()
         return row[0] if row else 0
 
 
 def increment_usage_count() -> int:
-    with usage_count_lock:
-        _usage_db_conn.execute("UPDATE usage_count SET count = count + 1 WHERE id = 1")
-        _usage_db_conn.commit()
-        row = _usage_db_conn.execute("SELECT count FROM usage_count WHERE id = 1").fetchone()
+    with usage_count_lock, _usage_db_connect() as conn:
+        conn.execute("UPDATE usage_count SET count = count + 1 WHERE id = 1")
+        row = conn.execute("SELECT count FROM usage_count WHERE id = 1").fetchone()
         return row[0] if row else 0
 
 
@@ -7010,3 +7020,4 @@ if __name__ == "__main__":
     print("CatProxyService - Web版")
     print("=" * 50)
     app.run(host='0.0.0.0', port=5001, debug=True)
+

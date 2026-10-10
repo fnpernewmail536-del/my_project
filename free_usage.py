@@ -14,6 +14,7 @@ import time
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
+from db_storage import connect as database_connect
 
 
 JST = ZoneInfo("Asia/Tokyo")
@@ -87,19 +88,20 @@ class FreeUsageManager:
 
     @staticmethod
     def _configure_connection(conn: sqlite3.Connection) -> sqlite3.Connection:
-        conn.execute("PRAGMA journal_mode=WAL")
+        if not getattr(conn, "is_remote", False):
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=10000")
         conn.execute("PRAGMA foreign_keys=ON")
-        conn.execute("PRAGMA busy_timeout=10000")
         return conn
 
     def _bonus_connect(self) -> sqlite3.Connection:
         return self._configure_connection(
-            sqlite3.connect(self.bonus_db_path, timeout=10, isolation_level=None)
+            database_connect(self.bonus_db_path, timeout=10, isolation_level=None)
         )
 
     def _invitation_connect(self) -> sqlite3.Connection:
         return self._configure_connection(
-            sqlite3.connect(self.invitation_db_path, timeout=10, isolation_level=None)
+            database_connect(self.invitation_db_path, timeout=10, isolation_level=None)
         )
 
     @contextmanager
@@ -1005,3 +1007,4 @@ class FreeUsageManager:
                 "WHERE id=? AND status='rewarded' AND vip_trial_processed_at IS NULL",
                 (time.time() if now is None else float(now), event_id),
             )
+

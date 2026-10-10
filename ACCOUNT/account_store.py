@@ -15,6 +15,7 @@ import time
 import unicodedata
 from contextlib import contextmanager
 from typing import Callable
+from db_storage import connect as database_connect
 
 from Paython import (
     PaythonAmountMismatchError,
@@ -105,13 +106,14 @@ class AccountStore:
     @staticmethod
     def _configure(conn: sqlite3.Connection) -> sqlite3.Connection:
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
+        if not getattr(conn, "is_remote", False):
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=10000")
         conn.execute("PRAGMA foreign_keys=ON")
-        conn.execute("PRAGMA busy_timeout=10000")
         return conn
 
     def _connect(self) -> sqlite3.Connection:
-        return self._configure(sqlite3.connect(self.db_path, timeout=10, isolation_level=None))
+        return self._configure(database_connect(self.db_path, timeout=10, isolation_level=None))
 
     @contextmanager
     def _transaction(self):
@@ -1661,3 +1663,4 @@ class AccountStore:
     def remove_subscription_endpoint(self, endpoint: str) -> None:
         with self._transaction() as conn:
             conn.execute("DELETE FROM account_push_subscriptions WHERE endpoint=?", (str(endpoint),))
+
