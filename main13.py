@@ -301,7 +301,9 @@ def _bounded_bcsfe_request_post(self, no_timeout=False):
 
 core.RequestHandler.post = _bounded_bcsfe_request_post
 
+print("[STARTUP] Initializing game library", flush=True)
 core.core_data.init_data()
+print("[STARTUP] Game library ready", flush=True)
 
 BCSFE_EDIT_LOCK = threading.RLock()
 
@@ -393,7 +395,9 @@ try:
 except OSError:
     pass
 USAGE_DB_PATH = os.path.join(BASE_DIR, "count.db")
+print("[STARTUP] Initializing timing database", flush=True)
 job_timing_store = TimingStore(USAGE_DB_PATH)
+print("[STARTUP] Timing database ready", flush=True)
 try:
     if os.path.exists(USAGE_DB_PATH):
         os.chmod(USAGE_DB_PATH, 0o600)
@@ -411,16 +415,20 @@ if not _identity_secret:
     # 同じ利用者を識別できるよう、必ずいずれかの環境変数を固定する。
     _identity_secret = app.secret_key if isinstance(app.secret_key, bytes) else str(app.secret_key)
     print("[WARNING] IDENTITY_HASH_KEY/FLASK_SECRET_KEY is not configured; identity hashes may change after restart.")
+print("[STARTUP] Initializing quota and invitation database", flush=True)
 free_usage_manager = FreeUsageManager(
     BONUS_DB_PATH,
     INVITATION_DB_PATH,
     _identity_secret,
 )
+print("[STARTUP] Quota and invitation database ready", flush=True)
+print("[STARTUP] Initializing account database", flush=True)
 account_store = AccountStore(
     ACCOUNT_DB_PATH,
     os.getenv("ACCOUNT_IDENTITY_HASH_KEY") or _identity_secret,
     vip_plan_prices=VIP_PLAN_PRICES,
 )
+print("[STARTUP] Account database ready", flush=True)
 
 
 def _process_invitation_vip_trials() -> None:
