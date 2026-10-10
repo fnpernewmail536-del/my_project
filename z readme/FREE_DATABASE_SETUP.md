@@ -44,11 +44,12 @@ turso db tokens create catproxyservice
 保存して再デプロイします。既存の手動作成サービスでは、GitHubのrender.yamlを変更するだけでは
 Environmentに自動追加されないため、上の環境変数をRender側で追加してください。
 
-起動コマンドは変更不要です。
+既存のサービスも、SettingsのStart Commandを次の値へ変更してください。
+Render既定のpreloadを避け、DB接続とスレッドをワーカー内で初期化します。
 
 ```text
 Build Command: pip install -r requirements.txt
-Start Command: python -m gunicorn --config gunicorn.conf.py wsgi:app
+Start Command: python render_start.py
 Root Directory: 空欄
 ```
 

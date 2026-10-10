@@ -5,11 +5,17 @@ ZIP内のmy_projectフォルダの中身をリポジトリ直下に置いてく�
 
 - Root Directory: 空欄（main13.py・requirements.txt・wsgi.pyのある階層）
 - Build Command: `python -m pip install -r requirements.txt`
-- Start Command: `python -m gunicorn --config gunicorn.conf.py wsgi:app`
+- Start Command: `python render_start.py`
 
 既存RenderサービスではSettingsのStart Commandも上記に設定してください。
 以前の `--chdir Paython main13:app` は新しい配置に対応しません。
-render.yamlとProcfileは上記の起動入口を使用します。Gunicorn設定・依存関係は元ZIPのままです。
+render.yamlは上記の起動入口を使用します。
+Render既定の `GUNICORN_CMD_ARGS` に含まれる `--preload` を引き継がず、
+DB接続とバックグラウンドスレッドをワーカー内で初期化します。
+Gunicornの制御ソケットも無効にして、分岐前の制御スレッドを作りません。
+待ち時間の上限120秒は維持します。起動を終えていないアプリを正常として扱いません。
+`[STARTUP]` ログでゲームライブラリ・DB・Flaskの起動進捗を確認できます。
+45秒を超える初期化ではスタックを記録し、秘密値やローカル変数は出力しません。
 ローカルのWindowsではプロジェクトのルートで `python main13.py` を実行します。
 
 ## 設定とデータ
