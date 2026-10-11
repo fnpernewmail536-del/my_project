@@ -1420,17 +1420,14 @@ class AccountStore:
     def public_vip_stats(self) -> dict:
         now = time.time()
         with self._connect() as conn:
-            active_vip = int(conn.execute(
-                "SELECT COUNT(*) FROM accounts WHERE vip_active=1 AND (vip_expires_at IS NULL OR vip_expires_at>?)",
-                (now,),
-            ).fetchone()[0])
-            total_grants = int(conn.execute(
-                "SELECT COUNT(*) FROM vip_audit_logs WHERE action='grant'"
-            ).fetchone()[0])
-            grants_30d = int(conn.execute(
-                "SELECT COUNT(*) FROM vip_audit_logs WHERE action='grant' AND created_at>=?",
-                (now - 30 * 86400,),
-            ).fetchone()[0])
+            row = conn.execute(
+                "SELECT (SELECT COUNT(*) FROM accounts WHERE vip_active=1 "
+                "AND (vip_expires_at IS NULL OR vip_expires_at>?)), "
+                "COUNT(*), COALESCE(SUM(CASE WHEN created_at>=? THEN 1 ELSE 0 END),0) "
+                "FROM vip_audit_logs WHERE action='grant'",
+                (now, now - 30 * 86400),
+            ).fetchone()
+            active_vip, total_grants, grants_30d = map(int, row)
         return {
             "active_vip": active_vip,
             "total_grants": total_grants,
