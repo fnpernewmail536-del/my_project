@@ -9,12 +9,76 @@ from __future__ import annotations
 import os
 import sqlite3
 import threading
+import time
 from urllib.parse import urlsplit
 
 
 # Gunicorn uses one process with request/job threads. Serialize cloud write
 # transactions within that process, without blocking unrelated read connections.
 _CLOUD_WRITE_LOCK = threading.RLock()
+_POOL_LOCK = threading.Lock()
+_IDLE_CONNECTIONS = []
+_POOL_PID = os.getpid()
+_POOL_MAX_IDLE = 4
+_POOL_IDLE_SECONDS = 30
+_INHERITED_POOLS = []
+
+
+def _reset_after_fork():
+    global _CLOUD_WRITE_LOCK, _POOL_LOCK, _IDLE_CONNECTIONS, _POOL_PID
+    _CLOUD_WRITE_LOCK = threading.RLock()
+    _POOL_LOCK = threading.Lock()
+    # Never operate on or destroy a parent's native driver state in the child.
+    _INHERITED_POOLS.append(_IDLE_CONNECTIONS)
+    _IDLE_CONNECTIONS = []
+    _POOL_PID = os.getpid()
+
+
+if hasattr(os, "register_at_fork"):
+    os.register_at_fork(after_in_child=_reset_after_fork)
+
+
+def _quiet_close(raw):
+    try:
+        raw.close()
+    except Exception:
+        pass
+
+
+def clear_connection_pool():
+    """Discard idle connections, e.g. after credentials or a test primary change."""
+    with _POOL_LOCK:
+        idle = list(_IDLE_CONNECTIONS)
+        _IDLE_CONNECTIONS.clear()
+    for _, _, raw, _ in idle:
+        _quiet_close(raw)
+
+
+def _take_connection(key):
+    expired = []
+    found = None
+    now = time.monotonic()
+    with _POOL_LOCK:
+        for item in list(_IDLE_CONNECTIONS):
+            if now - item[1] >= _POOL_IDLE_SECONDS or item[0][:2] != key[:2]:
+                _IDLE_CONNECTIONS.remove(item)
+                expired.append(item[2])
+        for item in reversed(_IDLE_CONNECTIONS):
+            if item[0] == key:
+                _IDLE_CONNECTIONS.remove(item)
+                found = (item[2], item[3])
+                break
+    for raw in expired:
+        _quiet_close(raw)
+    return found
+
+
+def _return_connection(key, raw, foreign_keys, pid):
+    with _POOL_LOCK:
+        if pid == _POOL_PID == os.getpid() and len(_IDLE_CONNECTIONS) < _POOL_MAX_IDLE:
+            _IDLE_CONNECTIONS.append((key, time.monotonic(), raw, foreign_keys))
+            return
+    _quiet_close(raw)
 
 
 def storage_config() -> tuple[str, str]:
@@ -89,18 +153,32 @@ class _Cursor:
     def __init__(self, connection, raw):
         self.connection = connection
         self._raw = raw
+        self._description = None
+        self._rowcount = -1
+        self._lastrowid = None
+        self._closed = False
+
+    def _check_open(self):
+        self.connection._check_open()
+        if self._closed:
+            raise sqlite3.ProgrammingError("database cursor is closed")
+
+    def _capture_metadata(self):
+        self._description = self.connection._driver_call(lambda: self._raw.description)
+        self._rowcount = self.connection._driver_call(lambda: self._raw.rowcount)
+        self._lastrowid = self.connection._driver_call(lambda: self._raw.lastrowid)
 
     @property
     def description(self):
-        return _call(lambda: self._raw.description)
+        return self._description
 
     @property
     def rowcount(self):
-        return _call(lambda: self._raw.rowcount)
+        return self._rowcount
 
     @property
     def lastrowid(self):
-        return _call(lambda: self._raw.lastrowid)
+        return self._lastrowid
 
     def _row(self, values):
         if values is None:
@@ -111,28 +189,39 @@ class _Cursor:
         return factory(self, values) if factory else values
 
     def execute(self, sql, parameters=()):
+        self._check_open()
         self.connection._execute(self._raw.execute, sql, parameters)
+        self._capture_metadata()
         return self
 
     def executemany(self, sql, parameters):
+        self._check_open()
         self.connection._execute(self._raw.executemany, sql, parameters)
+        self._capture_metadata()
         return self
 
     def executescript(self, sql):
+        self._check_open()
         self.connection._execute(self._raw.executescript, sql, script=True)
+        self._capture_metadata()
         return self
 
     def fetchone(self):
-        return self._row(_call(self._raw.fetchone))
+        self._check_open()
+        return self._row(self.connection._driver_call(self._raw.fetchone))
 
     def fetchall(self):
-        return [self._row(row) for row in (_call(self._raw.fetchall) or [])]
+        self._check_open()
+        return [self._row(row) for row in (self.connection._driver_call(self._raw.fetchall) or [])]
 
     def fetchmany(self, size=1):
-        return [self._row(row) for row in (_call(self._raw.fetchmany, size) or [])]
+        self._check_open()
+        return [self._row(row) for row in (self.connection._driver_call(self._raw.fetchmany, size) or [])]
 
     def close(self):
-        _call(self._raw.close)
+        if not self._closed and not self.connection._closed:
+            self.connection._driver_call(self._raw.close)
+            self._closed = True
 
     def __iter__(self):
         return self
@@ -147,10 +236,27 @@ class _Cursor:
 class _CloudConnection:
     is_remote = True
 
-    def __init__(self, raw):
+    def __init__(self, raw, pool_key=None, foreign_keys=None):
         self._raw = raw
         self.row_factory = None
         self._write_locked = False
+        self._pool_key = pool_key
+        self._foreign_keys = foreign_keys
+        self._closed = False
+        self._broken = False
+        self._pid = os.getpid()
+        self._cursors = []
+
+    def _check_open(self):
+        if self._closed or self._pid != os.getpid():
+            raise sqlite3.ProgrammingError("database connection is closed")
+
+    def _driver_call(self, method, *args, **kwargs):
+        try:
+            return _call(method, *args, **kwargs)
+        except sqlite3.OperationalError:
+            self._broken = True
+            raise
 
     def _release_write_lock(self):
         if self._write_locked:
@@ -158,6 +264,7 @@ class _CloudConnection:
             _CLOUD_WRITE_LOCK.release()
 
     def _execute(self, method, sql, *args, script=False):
+        self._check_open()
         command = sql.lstrip().split(None, 1)[0].upper() if sql.strip() else ""
         writes = script or command in {
             "BEGIN", "INSERT", "UPDATE", "DELETE", "REPLACE", "CREATE", "ALTER", "DROP", "VACUUM",
@@ -167,19 +274,37 @@ class _CloudConnection:
                 raise sqlite3.OperationalError("外部DBの書き込みが混雑しています。少し待って再試行してください。")
             self._write_locked = True
         try:
-            return _call(method, sql, *args)
+            result = self._driver_call(method, sql, *args)
+            normalized = sql.strip().rstrip(";").replace(" ", "").upper()
+            if normalized == "PRAGMAFOREIGN_KEYS=ON":
+                self._foreign_keys = True
+            elif normalized == "PRAGMAFOREIGN_KEYS=OFF":
+                self._foreign_keys = False
+            elif script:
+                self._foreign_keys = None
+            return result
+        except sqlite3.OperationalError:
+            self._broken = True
+            raise
         finally:
             if self._write_locked and not self.in_transaction:
                 self._release_write_lock()
 
     @property
     def in_transaction(self):
-        return _call(lambda: self._raw.in_transaction)
+        self._check_open()
+        return self._driver_call(lambda: self._raw.in_transaction)
 
     def cursor(self):
-        return _Cursor(self, _call(self._raw.cursor))
+        self._check_open()
+        cursor = _Cursor(self, self._driver_call(self._raw.cursor))
+        self._cursors.append(cursor)
+        return cursor
 
     def execute(self, sql, parameters=()):
+        if sql.strip().rstrip(";").replace(" ", "").upper() == "PRAGMAFOREIGN_KEYS=ON" and self._foreign_keys is True:
+            self._check_open()
+            return self.cursor()
         return self.cursor().execute(sql, parameters)
 
     def executemany(self, sql, parameters):
@@ -189,19 +314,50 @@ class _CloudConnection:
         return self.cursor().executescript(sql)
 
     def commit(self):
-        _call(self._raw.commit)
+        self._check_open()
+        try:
+            _call(self._raw.commit)
+        except sqlite3.OperationalError:
+            self._broken = True
+            raise
         self._release_write_lock()
 
     def rollback(self):
+        self._check_open()
         try:
             _call(self._raw.rollback)
+        except sqlite3.OperationalError:
+            self._broken = True
+            raise
         finally:
             self._release_write_lock()
 
     def close(self):
+        if self._closed:
+            return
+        if self._pid != os.getpid():
+            self._closed = True
+            self._write_locked = False
+            _INHERITED_POOLS.append(self)
+            return
         try:
-            _call(self._raw.close)
+            if self._broken:
+                _quiet_close(self._raw)
+                return
+            if self.in_transaction:
+                self.rollback()
+            for cursor in self._cursors:
+                cursor.close()
+            if self._pool_key is not None and not self._broken and self._foreign_keys is not False:
+                _return_connection(self._pool_key, self._raw, self._foreign_keys, self._pid)
+            else:
+                _quiet_close(self._raw)
+        except Exception:
+            _quiet_close(self._raw)
+            raise
         finally:
+            self._closed = True
+            self._cursors.clear()
             self._release_write_lock()
 
     def __enter__(self):
@@ -228,8 +384,15 @@ def connect(database, *, timeout=10, isolation_level="", check_same_thread=True)
         import libsql
     except ImportError:
         raise RuntimeError("libsql が必要です。requirements.txt をインストールしてください。") from None
+    key = (url, token, isolation_level, max(timeout, 10))
+    pooling = os.getenv("TURSO_POOL_ENABLED", "1") != "0"
+    if not pooling:
+        clear_connection_pool()
+    pooled = _take_connection(key) if pooling else None
+    if pooled is not None:
+        return _CloudConnection(pooled[0], key, pooled[1])
     raw = _call(
         libsql.connect, database=url, auth_token=token, timeout=max(timeout, 10),
-        isolation_level=isolation_level, _check_same_thread=check_same_thread,
+        isolation_level=isolation_level, _check_same_thread=False,
     )
-    return _CloudConnection(raw)
+    return _CloudConnection(raw, key if pooling else None)

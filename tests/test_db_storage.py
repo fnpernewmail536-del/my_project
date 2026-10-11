@@ -20,8 +20,9 @@ from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
 import libsql
+import db_storage
 from ACCOUNT.account_store import AccountStore
-from db_storage import connect, storage_config
+from db_storage import clear_connection_pool, connect, storage_config
 from free_usage import FreeUsageManager, QuotaExhausted
 
 
@@ -31,6 +32,8 @@ NATIVE_CONNECT = libsql.connect
 
 class CloudStorageTests(unittest.TestCase):
     def setUp(self):
+        clear_connection_pool()
+        self.addCleanup(clear_connection_pool)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -164,6 +167,103 @@ class CloudStorageTests(unittest.TestCase):
                 connect(path)
         self.assertNotIn("dummy-test-token", str(captured.exception))
         self.assertFalse(path.exists())
+
+    def test_reuses_connection_without_caching_remote_rows(self):
+        with patch.object(libsql, "connect", side_effect=self.native_primary) as driver:
+            for index in range(10):
+                with connect(self.local / f"store-{index}.db", isolation_level=None) as conn:
+                    conn.execute("PRAGMA foreign_keys=ON")
+                    conn.execute("CREATE TABLE IF NOT EXISTS shared_value (value INTEGER)")
+            self.assertEqual(driver.call_count, 1)
+            with NATIVE_CONNECT(str(self.primary)) as other_app:
+                other_app.execute("INSERT INTO shared_value VALUES (42)")
+                other_app.commit()
+            with connect(self.local / "read.db", isolation_level=None) as conn:
+                self.assertEqual(conn.execute("SELECT value FROM shared_value").fetchone()[0], 42)
+            self.assertEqual(driver.call_count, 1)
+
+    def test_close_rolls_back_uncommitted_writes_and_preserves_cursor_metadata(self):
+        conn = connect(self.local / "write.db")
+        conn.execute("CREATE TABLE rollback_check (value INTEGER)")
+        conn.commit()
+        cursor = conn.execute("INSERT INTO rollback_check VALUES (1)")
+        cursor.close()
+        conn.close()
+        self.assertEqual(cursor.rowcount, 1)
+        with self.assertRaises(sqlite3.ProgrammingError):
+            cursor.fetchone()
+        with connect(self.local / "next.db") as reopened:
+            self.assertEqual(reopened.execute("SELECT COUNT(*) FROM rollback_check").fetchone()[0], 0)
+
+    def test_expired_or_failed_connections_are_discarded(self):
+        with patch.object(libsql, "connect", side_effect=self.native_primary) as driver:
+            with connect(self.local / "read.db") as conn:
+                conn.execute("SELECT 1").fetchone()
+            with patch("db_storage.time.monotonic", return_value=time.monotonic() + 31):
+                conn = connect(self.local / "read.db")
+                self.assertEqual(driver.call_count, 2)
+                with self.assertRaises(sqlite3.OperationalError):
+                    conn.execute("SELECT * FROM missing_table")
+                conn.close()
+            with connect(self.local / "read.db") as conn:
+                conn.execute("SELECT 1").fetchone()
+            self.assertEqual(driver.call_count, 3)
+
+    def test_pool_can_be_disabled_and_configuration_avoids_repeat_queries(self):
+        with patch.dict(os.environ, {"TURSO_POOL_ENABLED": "0"}), \
+             patch.object(libsql, "connect", side_effect=self.native_primary) as driver:
+            for _ in range(2):
+                with connect(self.local / "read.db") as conn:
+                    with patch.object(conn, "_execute", wraps=conn._execute) as execute:
+                        conn.execute("PRAGMA foreign_keys=ON")
+                        conn.execute("PRAGMA foreign_keys=ON")
+                        self.assertEqual(execute.call_count, 1)
+            self.assertEqual(driver.call_count, 2)
+        self.assertEqual(len(db_storage._IDLE_CONNECTIONS), 0)
+
+    def test_pool_has_bounded_idle_connections_and_exclusive_leases(self):
+        connections = [connect(self.local / "lease.db") for _ in range(6)]
+        self.assertEqual(len({id(conn._raw) for conn in connections}), 6)
+        for conn in connections:
+            conn.close()
+        self.assertEqual(len(db_storage._IDLE_CONNECTIONS), 4)
+        first, second = connect(self.local / "lease.db"), connect(self.local / "lease.db")
+        try:
+            self.assertIsNot(first._raw, second._raw)
+        finally:
+            first.close()
+            second.close()
+
+    def test_rotated_credentials_do_not_reuse_old_connection(self):
+        with patch.object(libsql, "connect", side_effect=lambda **kwargs: NATIVE_CONNECT(
+                str(self.primary), isolation_level=kwargs["isolation_level"],
+                _check_same_thread=False)) as driver:
+            with connect(self.local / "read.db") as conn:
+                conn.execute("SELECT 1").fetchone()
+            with patch.dict(os.environ, {"TURSO_AUTH_TOKEN": "dummy-rotated-token"}):
+                with connect(self.local / "read.db") as conn:
+                    conn.execute("SELECT 1").fetchone()
+            self.assertEqual(driver.call_count, 2)
+
+    def test_vip_stats_use_one_query_and_keep_results(self):
+        account = AccountStore(str(self.local / "ACCOUNT/account.db"), "test-secret")
+        user = account.create_account("192.0.2.10", "1" * 64, "statsuser", "password-12345")
+        account.grant_vip(user["public_id"], 30, "test-admin")
+        original_connect = account._connect
+        executions = []
+        def tracked_connect():
+            conn = original_connect()
+            original_execute = conn.execute
+            def tracked_execute(sql, parameters=()):
+                executions.append(sql)
+                return original_execute(sql, parameters)
+            conn.execute = tracked_execute
+            return conn
+        with patch.object(account, "_connect", side_effect=tracked_connect):
+            self.assertEqual(account.public_vip_stats(), {
+                "active_vip": 1, "total_grants": 1, "grants_30d": 1,
+            })
+        self.assertEqual(len(executions), 1)
 
 
 class StorageConfigurationTests(unittest.TestCase):
