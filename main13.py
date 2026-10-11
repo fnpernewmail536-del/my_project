@@ -2041,8 +2041,8 @@ MAIN_STORY_CHAPTER_LABELS = [
 MAIN_STORY_REAL_INDEX = [0, 1, 2, 4, 5, 6, 7, 8, 9]
 
 
-# レジェンド系の表示名はbcsfeのゲームデータから取得する。セーブ配列の種類と
-# Map_Name / StageName のコードを同じ表で管理し、画面と適用処理のずれを防ぐ。
+# レジェンド系は検証済みの公開データで自動更新する。BCDataの番号体系と
+# セーブ配列の種類を同じ表で管理し、画面と適用処理のずれを防ぐ。
 LEGEND_SERIES = {
     "legend": {"label": "レジェンドストーリー", "code": "N", "base_index": 0},
     "true_legend": {"label": "真レジェンドストーリー", "code": "NA", "base_index": 13000},
@@ -2950,6 +2950,290 @@ def _fetch_published_characters(current):
     return _parse_published_characters(cats, stats, pools, current, revision)
 
 
+# battlecatsinfoの同一コミットから確認済みのJP 15.7.1レジェンド定義。
+# 配布元未取得時も章名・冠数を推測せず、この検証済み一覧を使う。
+BUNDLED_LEGEND_DATA_B64 = (
+    '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'
+)
+
+
+def _bundled_legend_metadata():
+    return json.loads(gzip.decompress(base64.b64decode(BUNDLED_LEGEND_DATA_B64)))
+
+
+def _validate_legend_update(candidate, current):
+    """章・冠・ステージの保存indexを検証し、既知の定義を減らさない。"""
+    if (not isinstance(candidate, dict)
+            or _game_version_number(candidate.get("data_version")) < _game_version_number(current["data_version"])):
+        raise ValueError("旧版または不正なレジェンド定義です")
+    if candidate.get("source") not in ("battlecatsinfo", "bcsfe"):
+        raise ValueError("レジェンド定義の取得元が不正です")
+    if (candidate["source"] == "battlecatsinfo"
+            and not re.fullmatch(r"[0-9a-f]{40}", str(candidate.get("revision", "")))):
+        raise ValueError("レジェンド定義のコミット番号が不正です")
+
+    def valid_name(name):
+        return (isinstance(name, str) and bool(name.strip()) and len(name) <= 240
+                and not any(ord(ch) < 32 for ch in name))
+
+    for series_key, spec in LEGEND_SERIES.items():
+        series = candidate.get(series_key)
+        if not isinstance(series, dict) or series.get("label") != spec["label"]:
+            raise ValueError("レジェンドの種類が不正です")
+        maps = series.get("maps")
+        previous = current[series_key]["maps"]
+        if not isinstance(maps, list) or not len(previous) <= len(maps) <= 1000:
+            raise ValueError("レジェンドの章定義が欠損しています")
+        for index, map_spec in enumerate(maps):
+            if (not isinstance(map_spec, dict) or type(map_spec.get("id")) is not int
+                    or map_spec["id"] != index or not valid_name(map_spec.get("name"))):
+                raise ValueError("レジェンドの章番号・章名が不正です")
+            crowns = map_spec.get("crowns")
+            stages = map_spec.get("stages")
+            if (type(crowns) is not int or not 1 <= crowns <= 4
+                    or not isinstance(stages, list) or not 1 <= len(stages) <= 255
+                    or any(not valid_name(name) for name in stages)):
+                raise ValueError("レジェンドの冠数・ステージ名が不正です")
+            if index < len(previous) and (crowns < previous[index]["crowns"]
+                                          or len(stages) < len(previous[index]["stages"])):
+                raise ValueError("既知のレジェンドの冠・ステージが減っています")
+    return candidate
+
+
+def _parse_published_legend_stages(map_tsv, stage_tsv, data_version, current, revision):
+    # 公開サイトのIDは36進数。章IDはgroup*1000+index、ステージIDは章ID*1000+index。
+    # 公開元のstage_scheme.jsonで確認した3系列だけを、セーブの同じindexへ対応させる。
+    group_keys = {0: "legend", 9: "true_legend", 16: "zero_legend"}
+    stage_rows = csv.DictReader(io.StringIO(stage_tsv), delimiter="\t")
+    map_rows = csv.DictReader(io.StringIO(map_tsv), delimiter="\t")
+    if (not {"id", "name_jp"}.issubset(stage_rows.fieldnames or [])
+            or not {"id", "name_jp", "stars"}.issubset(map_rows.fieldnames or [])):
+        raise ValueError("公開レジェンドTSVの列が不正です")
+    stages_by_map = {}
+    for row in stage_rows:
+        full_stage_id = int(row["id"], 36)
+        full_map_id, stage_id = divmod(full_stage_id, 1000)
+        if full_map_id // 1000 not in group_keys:
+            continue
+        stages = stages_by_map.setdefault(full_map_id, {})
+        if stage_id in stages:
+            raise ValueError("レジェンドのステージ番号が重複しています")
+        stages[stage_id] = row["name_jp"].strip()
+    candidate = {"data_version": data_version, "source": "battlecatsinfo", "revision": revision}
+    for series_key, spec in LEGEND_SERIES.items():
+        candidate[series_key] = {"label": spec["label"], "maps": []}
+    seen = set()
+    for row in map_rows:
+        full_map_id = int(row["id"], 36)
+        group, map_id = divmod(full_map_id, 1000)
+        if group not in group_keys:
+            continue
+        if full_map_id in seen:
+            raise ValueError("レジェンドの章番号が重複しています")
+        seen.add(full_map_id)
+        stages = stages_by_map.get(full_map_id, {})
+        if not stages or sorted(stages) != list(range(len(stages))):
+            raise ValueError("レジェンドのステージ定義が欠損しています")
+        multipliers = [int(value) for value in row["stars"].split(",")] if row["stars"] else [100]
+        if any(value <= 0 for value in multipliers):
+            raise ValueError("レジェンドの冠定義が不正です")
+        candidate[group_keys[group]]["maps"].append({
+            "id": map_id, "name": row["name_jp"].strip(),
+            "stages": [stages[index] for index in range(len(stages))], "crowns": len(multipliers),
+        })
+    for series_key in LEGEND_SERIES:
+        candidate[series_key]["maps"].sort(key=lambda item: item["id"])
+    return _validate_legend_update(candidate, current)
+
+
+def _fetch_published_legend_stages(current):
+    commit = json.loads(_game_update_get("https://api.github.com/repos/battlecatsinfo/battlecatsinfo.github.io/commits/master"))
+    revision = commit.get("sha", "")
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise ValueError("公開データのコミット番号が不正です")
+    if revision == current.get("revision"):
+        return current
+    base = "https://raw.githubusercontent.com/battlecatsinfo/battlecatsinfo.github.io/" + revision + "/data/"
+    config = json.loads(_game_update_get(base + "config.json"))
+    data_version = config.get("japan")
+    # 配布元は15.8のように初版のpatch=0を省略することがある。
+    if isinstance(data_version, str) and re.fullmatch(r"\d{1,2}\.\d{1,2}", data_version):
+        data_version += ".0"
+    _game_version_number(data_version)
+    maps = _game_update_get(base + "map.tsv").decode("utf-8-sig")
+    stages = _game_update_get(base + "stage.tsv").decode("utf-8-sig")
+    return _parse_published_legend_stages(maps, stages, data_version, current, revision)
+
+
+def _download_legend_series(getter, all_map_names, map_option):
+    """BCDataが公開データより新しい場合にも、同じ3系列を検証できる形にする。"""
+    candidate = {"data_version": getter.version, "source": "bcsfe"}
+    cc = core.CountryCode.from_code("jp")
+    for series_key, spec in LEGEND_SERIES.items():
+        stage_data = getter.download("resLocal", f"StageName_R{spec['code']}_ja.csv")
+        if stage_data is None:
+            raise RuntimeError(f"{series_key}のステージ名を取得できません")
+        maps = []
+        for map_id, row in enumerate(core.CSV(stage_data, core.Delimeter.from_country_code_res(cc))):
+            stage_names = _clean_stage_names(row.to_str_list())
+            map_name = all_map_names.get(spec["base_index"] + map_id)
+            if not stage_names or not map_name:
+                continue
+            option = map_option.get_map(spec["base_index"] + map_id) if map_option else None
+            if option is None:
+                raise ValueError("レジェンドの冠定義を取得できません")
+            maps.append({"id": map_id, "name": map_name, "stages": stage_names,
+                         "crowns": max(1, min(4, int(option.crown_count)))})
+        candidate[series_key] = {"label": spec["label"], "maps": maps}
+    return candidate
+
+
 def _validate_rank_update(candidate, current):
     thresholds = candidate.get("thresholds")
     if (_game_version_number(candidate.get("data_version")) < _game_version_number(current["data_version"])
@@ -2968,10 +3252,11 @@ def _ensure_game_update_state():
         if _game_update_state is not None:
             return _game_update_state
         bundled = _bundled_character_metadata()
+        legend = _bundled_legend_metadata()
         rank = {"data_version": core.GameVersion(BUNDLED_RANK_GIFT_VERSION_NUMBER).to_string(),
                 "thresholds": json.loads(gzip.decompress(base64.b64decode(BUNDLED_RANK_GIFT_THRESHOLDS_B64)))}
         state = {"schema": 1, "game_version_number": TARGET_GAME_VERSION_NUMBER,
-                 "characters": bundled, "rank_gifts": rank, "last_checked_at": None,
+                 "characters": bundled, "rank_gifts": rank, "legend_stages": legend, "last_checked_at": None,
                  "next_check_at": 0, "status": "pending", "errors": []}
         try:
             with open(GAME_UPDATE_CACHE_PATH, "rb") as file:
@@ -2985,13 +3270,23 @@ def _ensure_game_update_state():
             if not isinstance(version, int) or not 10000 <= version <= 999999:
                 raise ValueError("更新キャッシュの版数が不正です")
             state["game_version_number"] = max(TARGET_GAME_VERSION_NUMBER, version)
-            state["characters"] = _validate_character_update(cached["characters"], bundled)
-            state["rank_gifts"] = _validate_rank_update(cached["rank_gifts"], rank)
+            for key, validator in (("characters", _validate_character_update),
+                                   ("rank_gifts", _validate_rank_update),
+                                   ("legend_stages", _validate_legend_update)):
+                # 修正前のschema 1キャッシュにはlegend_stagesがない。
+                # 一種類の壊れたキャッシュで、他の検証済み定義を破棄しない。
+                if key == "legend_stages" and key not in cached:
+                    continue
+                try:
+                    state[key] = validator(cached[key], state[key])
+                except Exception as exc:
+                    print(f"[GAME UPDATE] {key} cache fallback: {type(exc).__name__}")
         except FileNotFoundError:
             pass
         except Exception as exc:
             print(f"[GAME UPDATE] cache fallback: {type(exc).__name__}")
-            state.update(game_version_number=TARGET_GAME_VERSION_NUMBER, characters=bundled, rank_gifts=rank)
+            state.update(game_version_number=TARGET_GAME_VERSION_NUMBER, characters=bundled,
+                         rank_gifts=rank, legend_stages=legend)
         _game_update_state = state
         return state
 
@@ -3040,6 +3335,15 @@ def _refresh_game_updates():
         except Exception as exc:
             errors.append("characters:" + type(exc).__name__)
         try:
+            with _game_update_state_lock:
+                current = _game_update_state["legend_stages"]
+            candidate = _fetch_published_legend_stages(current)
+            with _game_update_state_lock:
+                _game_update_state["legend_stages"] = _validate_legend_update(candidate, _game_update_state["legend_stages"])
+            successes += 1
+        except Exception as exc:
+            errors.append("legend_stages:" + type(exc).__name__)
+        try:
             repo = json.loads(_game_update_get(core.GameDataGetter.repo_url()))
             if not isinstance(repo, dict) or not isinstance(repo.get("versions"), dict):
                 raise ValueError("BCData配布データの形式が不正です")
@@ -3049,6 +3353,7 @@ def _refresh_game_updates():
                 with _game_update_state_lock:
                     current = _game_update_state["characters"]
                     rank = _game_update_state["rank_gifts"]
+                    legend = _game_update_state["legend_stages"]
                 if version >= _game_version_number(current["data_version"]):
                     candidate = _download_character_metadata(getter=getter)
                     with _game_update_state_lock:
@@ -3061,6 +3366,17 @@ def _refresh_game_updates():
                     candidate = {"data_version": getter.version, "thresholds": thresholds}
                     with _game_update_state_lock:
                         _game_update_state["rank_gifts"] = _validate_rank_update(candidate, _game_update_state["rank_gifts"])
+                if version > _game_version_number(legend["data_version"]):
+                    names = getter.download("resLocal", "Map_Name.csv")
+                    options = getter.download("DataLocal", "Map_option.csv")
+                    if names is None or options is None:
+                        raise ValueError("BCDataのレジェンド定義を取得できません")
+                    all_map_names = {row[0].to_int(): row[1].to_str().strip()
+                                     for row in core.CSV(names, core.Delimeter.from_country_code_res(core.CountryCode.from_code("jp")))
+                                     if len(row) >= 2}
+                    candidate = _download_legend_series(getter, all_map_names, core.MapOption.from_csv(core.CSV(options)))
+                    with _game_update_state_lock:
+                        _game_update_state["legend_stages"] = _validate_legend_update(candidate, _game_update_state["legend_stages"])
             successes += 1
         except Exception as exc:
             errors.append("bcdata:" + type(exc).__name__)
@@ -3072,6 +3388,7 @@ def _refresh_game_updates():
         _persist_game_update_state()
         print(f"[GAME UPDATE] JP {core.GameVersion(get_target_game_version_number()).to_string()} / "
               f"characters {get_character_metadata()['data_version']} / "
+              f"legend {_game_update_state['legend_stages']['data_version']} / "
               f"{'retry' if errors else 'ok'}")
         return True
     finally:
@@ -3114,6 +3431,10 @@ def get_game_update_status():
                 "game_version": core.GameVersion(state["game_version_number"]).to_string(),
                 "character_data_version": state["characters"]["data_version"],
                 "rank_gift_data_version": state["rank_gifts"]["data_version"],
+                "legend_data_version": state["legend_stages"]["data_version"],
+                "legend_source": state["legend_stages"]["source"],
+                "legend_revision": state["legend_stages"].get("revision"),
+                "legend_map_counts": {key: len(state["legend_stages"][key]["maps"]) for key in LEGEND_SERIES},
                 "character_count": sum(c.get("selectable", True) for c in state["characters"]["characters"]),
                 "save_runtime": get_save_runtime_status(),
                 "last_checked_at": state["last_checked_at"], "next_check_at": state["next_check_at"],
@@ -3233,8 +3554,8 @@ def get_ototo_metadata():
         return _ototo_metadata_cache
 
 
-def get_legend_metadata():
-    """bcsfeの最新JPゲームデータから章名・ステージ名・実装済み冠数を返す。"""
+def _get_base_legend_metadata():
+    """BCDataから従来のイベント・アイテム等を取得し、15分キャッシュする。"""
     global _legend_metadata_cache, _legend_metadata_cached_at
     if _legend_metadata_cache is not None and time.time() - _legend_metadata_cached_at < LEGEND_METADATA_TTL:
         return _legend_metadata_cache
@@ -3274,29 +3595,6 @@ def get_legend_metadata():
                 if label and localizable_names.get(label):
                     special_rule_names[full_map_id] = localizable_names[label]
         metadata = {}
-        for series_key, spec in LEGEND_SERIES.items():
-            stage_data = getter.download(
-                "resLocal", f"StageName_R{spec['code']}_ja.csv"
-            )
-            if stage_data is None:
-                raise RuntimeError(f"{series_key}のステージ名を取得できません")
-            stage_csv = core.CSV(stage_data, core.Delimeter.from_country_code_res(cc))
-            maps = []
-            for map_id, row in enumerate(stage_csv):
-                stage_names = _clean_stage_names(row.to_str_list())
-                map_name = all_map_names.get(spec["base_index"] + map_id)
-                if not stage_names or not map_name:
-                    continue
-                option = map_option.get_map(spec["base_index"] + map_id) if map_option else None
-                crown_count = max(1, min(4, int(option.crown_count if option else 4)))
-                maps.append({
-                    "id": map_id,
-                    "name": map_name,
-                    "stages": stage_names,
-                    "crowns": crown_count,
-                })
-            metadata[series_key] = {"label": spec["label"], "maps": maps}
-
         # ゾンビ襲来はメイン3編×各3章。セーブ内のステージ順に並べ替えて返す。
         story_stage_names = {}
         for chapter_type in range(3):
@@ -3534,10 +3832,30 @@ def get_legend_metadata():
         return metadata
 
 
+def get_legend_metadata():
+    """共通一覧へ検証済みの最新3系列を載せ、15分キャッシュの更新遅れを防ぐ。"""
+    _start_game_auto_updates()
+    try:
+        metadata = dict(_get_base_legend_metadata())
+    except Exception:
+        if _legend_metadata_cache is None:
+            raise
+        # 既存のイベント等も、配布元の一時障害で一覧を消さない。
+        metadata = dict(_legend_metadata_cache)
+    with _game_update_state_lock:
+        legend = _game_update_state["legend_stages"]
+        for series_key in LEGEND_SERIES:
+            metadata[series_key] = copy.deepcopy(legend[series_key])
+        # data_versionは従来のBCDataの版数。レジェンドの実取得版を別に示す。
+        metadata["legend_data_version"] = legend["data_version"]
+        metadata["legend_source"] = legend["source"]
+        metadata["legend_revision"] = legend.get("revision")
+    return metadata
+
+
 LATEST_STAGE_CONTAINER_MINIMUMS = {
     "gauntlets": 82,
     "collab_gauntlets": 28,
-    "zero_legend": 34,
 }
 LATEST_TALENT_ORB_COUNT = 310
 
@@ -3608,7 +3926,7 @@ def _ensure_standard_chapter_map(container, map_id):
 
 
 def _ensure_latest_stage_slots(save, metadata=None):
-    """15.5.1の既存ステージ機能に必要な保存枠を進行状態を保って補完する。"""
+    """取得済みのステージ機能に必要な保存枠を進行状態を保って補完する。"""
     targets = dict(LATEST_STAGE_CONTAINER_MINIMUMS)
     if metadata:
         for family_key, attribute in (
@@ -3620,9 +3938,6 @@ def _ensure_latest_stage_slots(save, metadata=None):
             maps = metadata.get("event_stage_families", {}).get(family_key, {}).get("maps", [])
             if maps:
                 targets[attribute] = max(targets.get(attribute, 0), max(item["id"] for item in maps) + 1)
-        zero_maps = metadata.get("zero_legend", {}).get("maps", [])
-        if zero_maps:
-            targets["zero_legend"] = max(targets["zero_legend"], max(item["id"] for item in zero_maps) + 1)
 
     for attribute in ("gauntlets", "collab_gauntlets", "behemoth_culling", "enigma_clears"):
         target_length = targets.get(attribute, 0)
@@ -3643,8 +3958,10 @@ def _ensure_latest_stage_slots(save, metadata=None):
         catclaw_maps = metadata.get("event_stage_families", {}).get("catclaw", {}).get("maps", [])
         if catclaw_maps and getattr(save, "dojo_chapters", None) is not None:
             save.dojo_chapters.create(max(item["id"] for item in catclaw_maps))
-    if targets.get("zero_legend"):
-        _ensure_zero_map(save, targets["zero_legend"] - 1)
+    zero_series = (metadata or {}).get("zero_legend") or _ensure_game_update_state()["legend_stages"]["zero_legend"]
+    zero_specs = {item["id"]: item for item in zero_series["maps"]}
+    for map_id in sorted(zero_specs):
+        _ensure_zero_map(save, map_id, zero_specs)
 
 
 def ensure_latest_save_schema(save, target_version_number=None):
@@ -4158,7 +4475,7 @@ def safe_lineup_settings(data):
 
 
 def safe_legend_stages(data):
-    """章→星→ステージの選択をbcsfeメタデータに照合して正規化する。"""
+    """章→星→ステージの選択を最新の検証済みメタデータに照合する。"""
     raw = data.get("legend_stages", {})
     if not isinstance(raw, dict) or not raw:
         return {}
@@ -4303,21 +4620,37 @@ def apply_vip_talent_orbs(save, talent_orbs):
     return []
 
 
-def _ensure_zero_map(save, map_id):
-    """古いテンプレートにも最新の零レジェンド章スロットを安全に追加する。"""
+def _ensure_zero_map(save, map_id, map_specs=None):
+    """取得済みの章・冠・ステージ数だけを追加し、既存の進行状態を保持する。"""
     chapters = save.zero_legends.chapters
-    if not chapters:
+    if map_id < 0:
         return False
+    if map_specs is None:
+        map_specs = {item["id"]: item for item in _ensure_game_update_state()["legend_stages"]["zero_legend"]["maps"]}
+    if any(index not in map_specs for index in range(len(chapters), map_id + 1)):
+        return False
+
+    def empty_map(spec):
+        # BCSFEのネイティブ型を使い、最初の章を複製した誤ったステージ数を避ける。
+        values = {"unknown": 0, "chapters": [
+            {"selected_stage": 0, "clear_progress": 0, "unlock_state": 0,
+             "stages": [0 for _ in spec["stages"]]} for _ in range(spec["crowns"])
+        ]}
+        return type(save.zero_legends).deserialize([values]).chapters[0]
+
     while len(chapters) <= map_id:
-        chapters.append(copy.deepcopy(chapters[0]))
-        for chapter in chapters[-1].chapters:
-            chapter.selected_stage = 0
-            chapter.clear_progress = 0
-            chapter.unlock_state = 0
-            if hasattr(chapter, "chapter_unlock_state"):
-                chapter.chapter_unlock_state = 0
-            for stage in chapter.stages:
-                stage.clear_times = 0
+        chapters.append(empty_map(map_specs[len(chapters)]))
+    spec = map_specs.get(map_id)
+    if spec is not None:
+        stars = chapters[map_id].chapters
+        if len(stars) < spec["crowns"]:
+            fresh = empty_map(spec)
+            stars.extend(fresh.chapters[len(stars):])
+        for chapter in stars:
+            if len(chapter.stages) < len(spec["stages"]):
+                fresh = empty_map(spec).chapters[0]
+                chapter.stages.extend(fresh.stages[len(chapter.stages):])
+            chapter.total_stages = len(chapter.stages)
     return True
 
 
@@ -4349,6 +4682,8 @@ def apply_legend_stages(save, selections):
     for series_key, maps in (selections or {}).items():
         applied = 0
         for map_id, stars in maps.items():
+            if series_key == "zero_legend" and not _ensure_zero_map(save, map_id):
+                continue
             for star, stage_ids in stars.items():
                 for stage_id in stage_ids:
                     try:
@@ -4367,8 +4702,6 @@ def apply_legend_stages(save, selections):
                             chapter.clear_progress = max(chapter.clear_progress, stage_id + 1)
                             chapter.stages[stage_id].clear_stage(1, ensure_cleared_only=True)
                         elif series_key == "zero_legend":
-                            if not _ensure_zero_map(save, map_id):
-                                continue
                             chapter = save.zero_legends.chapters[map_id].chapters[star]
                             if stage_id >= len(chapter.stages):
                                 continue
@@ -6733,7 +7066,9 @@ def api_vip_legend_metadata():
     if not site_vip_confirmed():
         return jsonify({"error": "VIP限定機能です"}), 403
     try:
-        return jsonify(get_legend_metadata())
+        response = jsonify(get_legend_metadata())
+        response.headers["Cache-Control"] = "no-store"
+        return response
     except Exception as e:
         print(f"[ERROR] vip legend metadata: {e}")
         return jsonify({"error": "ステージ名データを読み込めませんでした"}), 500
