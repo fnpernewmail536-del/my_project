@@ -7149,7 +7149,7 @@ def _theme_videos():
 
 @app.context_processor
 def _theme_context():
-    default_name = "minecraft_bg.mp4"
+    default_name = "grassland (shadow).mp4"
     if not os.path.isfile(os.path.join(THEME_VIDEO_DIR, default_name)):
         videos = _theme_videos()
         default_name = videos[0] if videos else ""
