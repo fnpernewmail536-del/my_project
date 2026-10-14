@@ -86,3 +86,7 @@ https://github.com/battlecatsinfo/battlecatsinfo.github.io/tree/295a7b0f0c93635c
 データ取得元のメタデータ:
 https://git.battlecatsmodding.org/fieryhenry/BCData/raw/branch/main/metadata.json
 
+
+2026-10-15：ローカルチャット版12の現在値による条件付き処理をVIP選択画面へ追加。
+適用方法・通常指定との混在制限・保持と保存／再読込検証はVIP_CONDITIONS.mdを参照。
+この追加ではHTML/vip.html、static/js/vip-form-extras.js、vip_conditions/も反映する。
