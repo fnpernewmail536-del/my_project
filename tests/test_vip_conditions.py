@@ -42,7 +42,8 @@ class ConditionalTests(unittest.TestCase):
                      **{series:{'maps':[{'id':0,'name':'fixture-map','stages':['stage1','stage2'],'crowns':4}]}
                         for series in ('legend','true_legend','zero_legend')},
                      'event_stage_families':{'event':{'maps':[{'id':0,'name':'fixture-event','crowns':1,'stages':['stage1']}]}},
-                     'facilities':[], 'aku':{'chapters':[{'id':0,'name':'魔界編','stages':['stage1','stage2']}]}}
+                     'facilities':[{'id':i,'max_base':10 if i==2 else 20,'max_plus':0 if i==2 else 10} for i in range(3)],
+                     'aku':{'chapters':[{'id':0,'name':'魔界編','stages':['stage1','stage2']}]}}
         self.context=patch.dict(self.app,{'get_character_metadata':lambda:self.metadata,
                                        'get_legend_metadata':lambda:self.legend,
                                        '_latest_jp_game_data_getter':lambda:self.getter})
@@ -174,20 +175,6 @@ class ConditionalTests(unittest.TestCase):
         self.assertEqual(self.reload(s).gamatoto.helpers.helpers[1].id,200)
         self.assertTrue(all(200<=h.id<212 for h in self.reload(s).gamatoto.helpers.helpers))
 
-    def test_aku_conditions_only_touch_known_stages(self):
-        s=self.save();s.aku.chapters=[core.game.map.aku.ChaptersStars.init(3,1)]
-        s.aku.chapters[0].chapters[0].stages[0].clear_times=5
-        self.apply(s,[rule('event','clear','atleast',1,family='aku')])
-        loaded=self.reload(s)
-        self.assertEqual([stage.clear_times for stage in loaded.aku.chapters[0].chapters[0].stages],[5,1,0])
-
-    def test_serialized_mismatch_stops_before_worker_can_upload(self):
-        s=self.save();original=core.SaveFile
-        def corrupted(*args,**kw):
-            loaded=original(*args,**kw);loaded.catfood+=1;return loaded
-        with patch.object(core,'SaveFile',side_effect=corrupted),self.assertRaisesRegex(RuntimeError,'アップロードを停止'):
-            self.apply(s,[rule('resource','catfood',value=100)])
-
     def test_malformed_conditions_and_mixed_input_and_missing_metadata_fail_before_jobs(self):
         valid=rule('resource','catfood','add',100)
         invalid=[{**valid,'expr':{'op':'__import__','value':1}},
@@ -202,6 +189,41 @@ class ConditionalTests(unittest.TestCase):
             self.app['compile_vip_form_extras']({'selected':{'s1':['catfood']},'vip_form_extras':{'conditional':{'rules':[valid]}}})
         self.getter.download.return_value=None
         with self.assertRaisesRegex(ValueError,'上限定義'):self.compile([rule('cat','base',value=50)])
+
+    def test_aku_conditions_only_touch_known_stages(self):
+        s=self.save();s.aku.chapters=[core.game.map.aku.ChaptersStars.init(3,1)]
+        s.aku.chapters[0].chapters[0].stages[0].clear_times=5
+        self.apply(s,[rule('event','clear','atleast',1,family='aku')])
+        loaded=self.reload(s)
+        self.assertEqual([stage.clear_times for stage in loaded.aku.chapters[0].chapters[0].stages],[5,1,0])
+
+    def test_serialized_mismatch_stops_before_worker_can_upload(self):
+        s=self.save();original=core.SaveFile
+        def corrupted(*args,**kw):
+            loaded=original(*args,**kw);loaded.catfood+=1;return loaded
+        with patch.object(core,'SaveFile',side_effect=corrupted),self.assertRaisesRegex(RuntimeError,'アップロードを停止'):
+            self.apply(s,[rule('resource','catfood',value=100)])
+
+    def test_auxiliary_max_actions_preserve_higher_values_and_reload(self):
+        s=self.save();s.special_skills.skills[0].upgrade.base=25
+        s.ototo.cannons.cannons[0]=core.game.gamoto.ototo.Cannon(0,[35])
+        s.cat_shrine.xp_offering=100000001
+        levels=Mock();levels.get_max_level.return_value=120
+        levels.get_xp_from_level.return_value=12345
+        with patch.object(core.core_data,'get_gamatoto_levels',return_value=levels):
+            self.apply(s,[rule('action',field,'max') for field in
+                          ('facilities','ototo','shrine','gamatoto_max')])
+        loaded=self.reload(s)
+        self.assertEqual(loaded.special_skills.skills[0].upgrade.base,25)
+        self.assertEqual(loaded.special_skills.skills[1].upgrade.base,19)
+        self.assertEqual(loaded.ototo.cannons.cannons[0].levels,[35])
+        self.assertEqual(loaded.cat_shrine.xp_offering,100000001)
+        self.assertEqual(loaded.gamatoto.xp,12345)
+
+    def test_auxiliary_failure_stops_processing(self):
+        with patch.object(core.core_data,'get_gamatoto_levels',side_effect=RuntimeError('fixture missing definition')):
+            with self.assertRaisesRegex(RuntimeError,'fixture missing definition'):
+                self.apply(self.save(),[rule('action','gamatoto_max','max')])
 
     def test_authenticated_api_validation_and_worker_connection(self):
         for path,handler,index in (('/api/run_daiko','api_run_daiko',7),('/api/run_create','api_run_create',4)):

@@ -72,3 +72,8 @@ DOMテストは開発環境だけでjsdomを使用します。Flask実行環境�
 ```sh
 node tests/test_vip_form_extras.js
 ```
+
+## 条件付き指定の追加
+
+現在値による条件分岐・加算・倍率・保持を、同じ選択画面の追加設定から指定できます。
+入力例・対応範囲・検証は [VIP_CONDITIONS.md](VIP_CONDITIONS.md) を参照してください。
