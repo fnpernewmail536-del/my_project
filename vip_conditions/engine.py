@@ -64,6 +64,38 @@ def select_ids(selector,metadata,index,collabs):
 def priority(selector):
     return 3 if selector.get('names') else 2 if selector.get('group') or selector.get('series') or selector.get('collab') is not None else 1 if selector.get('rarity') is not None else 0
 
+ACTION_ROOTS = {'facilities':'special_skills', 'ototo':'ototo',
+                'shrine':'cat_shrine', 'gamatoto_max':'gamatoto', 'remove_errors':'cats'}
+
+def apply_action(module, save, field, metadata):
+    """Auxiliary MAX actions must fail visibly and retain newer, higher values."""
+    def increase(obj, attr, target):
+        setattr(obj, attr, max(getattr(obj, attr), target))
+    if field == 'facilities':
+        for spec in metadata['facilities']:
+            skill = save.special_skills.skills[int(spec['id'])]
+            increase(skill.upgrade, 'base', max(0, int(spec['max_base']) - 1))
+            increase(skill.upgrade, 'plus', max(0, int(spec['max_plus'])))
+    elif field == 'ototo':
+        for cid, cannon in save.ototo.cannons.cannons.items():
+            increase(cannon, 'development', 3)
+            targets = [29] if cid == 0 else [29, 20, 20]
+            previous = list(cannon.levels)
+            cannon.levels = [max(previous[i] if i < len(previous) else 0, v)
+                             for i, v in enumerate(targets)] + previous[len(targets):]
+    elif field == 'shrine':
+        increase(save.cat_shrine, 'xp_offering', 100000000)
+    elif field == 'gamatoto_max':
+        levels = module.core.core_data.get_gamatoto_levels(save)
+        increase(save.gamatoto, 'xp', levels.get_xp_from_level(levels.get_max_level()))
+    elif field == 'remove_errors':
+        for cid in module.ERROR_CAT_IDS:
+            cat = save.cats.get_cat_by_id(cid - 1)
+            if cat is not None:
+                cat.remove(reset=True, save_file=save)
+    else:
+        raise ParseError('実行未対応の補助操作です：' + field)
+
 def compile_conditional(module,plan):
     rules=copy.deepcopy(plan.get('conditional_rules',[]))
     if len(rules)>2000:raise ParseError('条件指定が多すぎます。分割してください。')
@@ -296,6 +328,7 @@ def apply_conditional(module,save,compiled):
             checked.append({**r,'targets':targets})
         elif domain=='action':
             # Explicit auxiliary actions cannot touch characters or story state.
+            checked=[x for x in checked if x['domain']!='action' or x['field']!=field]
             checked.append(r)
         else:raise ParseError('実行未対応の条件対象です：'+domain)
     # Filter levels/talents of units left locked after all unlock exceptions.
@@ -313,8 +346,7 @@ def apply_conditional(module,save,compiled):
     for r in checked:
         if r['domain']=='helpers':
             save.gamatoto.helpers.helpers=r['targets'];continue
-        selected={'s4':[{'gamatoto_max':'gamatoto_max','facilities':'base_upgrades_max','ototo':'ototo_max','shrine':'cat_shrine_max','remove_errors':'remove_error_cats'}[r['field']]]}
-        module.apply_daiko_segment(save,selected['s4'],[],{})
+        apply_action(module,save,r['field'],meta)
     mismatches=[e['label'] for e in pending.values() if e['get']()!=e['new']]
     for key,before in protected.items():
         after=getattr(save,key)
@@ -340,6 +372,7 @@ def apply_conditional(module,save,compiled):
         elif domain=='legend':roots.add({'legend':'event_stages','true_legend':'uncanny','zero_legend':'zero_legends'}[rule['series']])
         elif domain=='event':roots.add('aku' if rule['family']=='aku' else 'event_stages')
         elif domain=='helpers':roots.add('gamatoto')
+        elif domain=='action':roots.add(ACTION_ROOTS[rule['field']])
     expected={key:plain(getattr(save,key)) for key in roots}
     version=save.game_version.game_version
     reloaded=module.core.SaveFile(module.core.Data(save.to_data().data),cc=save.cc)
