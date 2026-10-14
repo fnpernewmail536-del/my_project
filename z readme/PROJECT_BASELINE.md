@@ -73,6 +73,11 @@ https://github.com/battlecatsinfo/battlecatsinfo.github.io/tree/295a7b0f0c93635c
 
 ## 適用方法
 
+2026-10-14：既存VIP選択画面に数量範囲、レア度別レベル、＋値だけの変更、
+コラボ＋値の例外、レベル除外キャラの保持を追加。
+内容・適用ファイル・検証範囲はVIP_FORM_EXTRAS.mdを参照。
+この追加にはHTML/vip.html、static/js/vip-app.js、static/js/vip-form-extras.jsの更新も必要。
+
 既存の環境に適用する場合、`main13.py` をルートの同名ファイルへ上書きし、再起動する。
 ブラウザはCtrl＋F5で再読込。Renderでは変更をGitへ反映して再デプロイする。
 既存の `.env` とDBは保持する。BGM・背景・HTMLの上書きは不要。

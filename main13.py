@@ -1171,7 +1171,7 @@ def validate_common_input(data):
     if not isinstance(selected, dict):
         return jsonify({"error": "selected が不正です"}), 400
     for v in selected.values():
-        if not isinstance(v, list) or len(v) > 100:
+        if not isinstance(v, list) or len(v) > 100 or any(not isinstance(item, str) for item in v):
             return jsonify({"error": "selected が不正です"}), 400
     char_list = data.get("char_list", [])
     if not isinstance(char_list, list) or len(char_list) > MAX_CHAR_LIST:
@@ -1207,6 +1207,10 @@ def validate_common_input(data):
         if spec is None or not isinstance(values, dict) or len(values) > spec["length"]:
             return jsonify({"error": "vip_items が不正です"}), 400
 
+    extras = data.get("vip_form_extras", {})
+    if not isinstance(extras, dict) or len(extras) > 5:
+        return jsonify({"error": "追加の詳細設定が不正です"}), 400
+
     if not validate_legend_stages_shape(data):
         return jsonify({"error": "legend_stages が不正です"}), 400
     if not validate_detailed_stage_settings_shape(data):
@@ -1240,6 +1244,197 @@ def safe_count(data, maximum=MAX_COUNT):
         return max(1, min(maximum, int(data.get("count", 1))))
     except (TypeError, ValueError):
         return 1
+
+
+# VIP選択画面の範囲指定。ローカル版と同じ数量上限・抽選単位を使う。
+VIP_FORM_QUANTITIES = {
+    "custom_catfood": ("猫缶", 58999, None),
+    "custom_xp": ("XP", 99999999, None),
+    "custom_np": ("NP", 9999, None),
+    "custom_normal_tickets": ("にゃんこチケット", 999, None),
+    "custom_rare_tickets": ("レアチケット", 999, None),
+    "custom_platinum_tickets": ("プラチナチケット", 99, None),
+    "custom_legend_tickets": ("レジェンドチケット", 99, None),
+    "custom_leadership": ("リーダーシップ", 999, None),
+    "custom_battle_items": ("バトルアイテム", 999, "battle_items"),
+    "custom_catseyes": ("キャッツアイ", 999, "catseyes"),
+    "custom_catamins": ("ネコビタン", 999, "catamins"),
+    "custom_base_materials": ("城素材", 999, "base_materials"),
+    "custom_matatabi": ("マタタビ・獣石", 998, "catfruit"),
+    "custom_talent_orbs": ("本能玉", 998, "talent_orbs"),
+}
+
+
+def _vip_form_bounds(value, minimum, maximum):
+    if (not isinstance(value, list) or len(value) != 2
+            or any(type(number) is not int for number in value)
+            or not minimum <= value[0] <= value[1] <= maximum):
+        raise ValueError(f"範囲は{minimum}〜{maximum}の整数で、最小値以下にならない最大値を指定してください。")
+    return list(value)
+
+
+def _vip_form_collaboration_ids(metadata, required):
+    """コラボガチャの通常排出キャラを、コラボ例外へ巻き込まない。"""
+    collab, ordinary = set(), set()
+    for group in metadata.get("groups", []):
+        if group.get("kind") not in {"collab", "gacha"}:
+            continue
+        members = {int(cid) for cid in group.get("cat_ids", [])}
+        if any(cid <= 0 for cid in members):
+            raise ValueError("コラボ所属のキャラ番号が不正です。")
+        (collab if group["kind"] == "collab" else ordinary).update(members)
+    if any(type(info.get("collab")) is not bool for info in required) and (not collab or not ordinary):
+        raise ValueError("コラボ・通常ガチャの所属定義を取得できません。")
+    result = collab - ordinary
+    for info in metadata.get("characters", []):
+        if type(info.get("collab")) is bool:
+            (result.add if info["collab"] else result.discard)(int(info["id"]))
+    return result
+
+
+def compile_vip_form_extras(data):
+    """認証済みのVIP入力を、引き継ぎ取得前に検証済みの対象へ固定する。"""
+    raw = data.get("vip_form_extras", {})
+    if not isinstance(raw, dict) or set(raw) - {"quantities", "levels", "excluded_ids", "plus_supported_only", "orb_rank"}:
+        raise ValueError("追加の詳細設定が不正です。")
+    quantities, levels, excluded = raw.get("quantities", {}), raw.get("levels", {}), raw.get("excluded_ids", [])
+    if (not isinstance(quantities, dict) or len(quantities) > len(VIP_FORM_QUANTITIES)
+            or not isinstance(levels, dict) or len(levels) > 6
+            or not isinstance(excluded, list) or len(excluded) > MAX_CHARACTER_SETTINGS
+            or any(type(cid) is not int for cid in excluded)):
+        raise ValueError("範囲指定・レベル指定・除外キャラの入力が不正です。")
+    plus_supported = raw.get("plus_supported_only", False)
+    orb_rank = raw.get("orb_rank", "all")
+    if type(plus_supported) is not bool or orb_rank not in {"all", "S"}:
+        raise ValueError("＋対応・本能玉ランクの指定が不正です。")
+    if not quantities and not levels and not excluded:
+        return {}
+    compiled = {"quantities": {}, "levels": [], "excluded_ids": sorted(set(excluded)), "orb_rank": orb_rank}
+    group_metadata = None
+    for key, bounds in quantities.items():
+        if key not in VIP_FORM_QUANTITIES:
+            raise ValueError("範囲指定の対象が不正です。")
+        label, maximum, group = VIP_FORM_QUANTITIES[key]
+        spec = {"bounds": _vip_form_bounds(bounds, 0, maximum), "group": group}
+        if group:
+            if group_metadata is None:
+                group_metadata = get_legend_metadata()
+            if group == "talent_orbs":
+                spec["ids"] = sorted({int(rank["id"]) for item in group_metadata.get("talent_orbs", [])
+                                      for rank in item.get("ranks", [])
+                                      if orb_rank == "all" or str(rank.get("rank", "")).strip().upper() == "S"})
+            else:
+                labels = group_metadata.get("vip_item_groups", {}).get(group) or VIP_ITEM_LABELS.get(group, [])
+                spec["ids"] = list(range(len(labels)))
+            if not spec["ids"]:
+                raise ValueError(label + "の種類定義を取得できません。")
+        compiled["quantities"][key] = spec
+    if not levels and not excluded:
+        return compiled
+    metadata = get_character_metadata()
+    characters = {int(info["id"]): info for info in metadata.get("characters", []) if info.get("selectable", True)}
+    if not characters or any(cid not in characters for cid in compiled["excluded_ids"]):
+        raise ValueError("除外キャラの番号が取得済みのキャラ定義にありません。")
+    rules = {}
+    required = []
+    for rarity, rule in levels.items():
+        if rarity not in {str(index) for index in range(6)} or not isinstance(rule, dict) or set(rule) - {"base", "plus", "collab_plus"}:
+            raise ValueError("レア度別のレベル指定が不正です。")
+        rules[rarity] = {"base": None, "plus": None, "collab_plus": None}
+        for key, minimum, maximum in (("base", 1, 60), ("plus", 0, 90), ("collab_plus", 0, 90)):
+            if rule.get(key) is not None:
+                rules[rarity][key] = _vip_form_bounds(rule[key], minimum, maximum)
+        if not any(value is not None for value in rules[rarity].values()):
+            raise ValueError("変更する基本Lvまたは＋値を指定してください。")
+        targets = [info for info in characters.values() if int(info["rarity"]) == int(rarity)]
+        if not targets:
+            raise ValueError("対象レア度のキャラ定義がありません。")
+        if rules[rarity]["collab_plus"] is not None:
+            required.extend(targets)
+    collab_ids = _vip_form_collaboration_ids(metadata, required) if required else set()
+    unit_rows = None
+    if plus_supported and any(rule["plus"] is not None or rule["collab_plus"] is not None for rule in rules.values()):
+        getter = _latest_jp_game_data_getter()
+        contents = getter.download("DataLocal", "unitbuy.csv")
+        if contents is None:
+            raise ValueError("＋値の対応定義を取得できません。")
+        unit_rows = list(core.CSV(contents))
+    for rarity, rule in rules.items():
+        collab_found = False
+        for cid, info in characters.items():
+            if int(info["rarity"]) != int(rarity):
+                continue
+            is_collab = cid in collab_ids
+            collab_found = collab_found or is_collab
+            if cid in compiled["excluded_ids"]:
+                continue
+            plus = rule["collab_plus"] if is_collab and rule["collab_plus"] is not None else rule["plus"]
+            supported = True
+            if unit_rows is not None and plus is not None:
+                if cid > len(unit_rows) or len(unit_rows[cid - 1]) <= 51 or unit_rows[cid - 1][13].to_int() != int(rarity):
+                    raise ValueError(f"No.{cid}の＋値対応定義を確認できません。")
+                supported = unit_rows[cid - 1][51].to_int() > 0
+            if rule["base"] is not None or plus is not None:
+                compiled["levels"].append({"id": cid, "rarity": int(rarity), "base": rule["base"],
+                                            "plus": plus if supported else [0, 0], "collab": is_collab})
+        if rule["collab_plus"] is not None and not collab_found:
+            raise ValueError("対象レア度のコラボキャラを確認できません。")
+    return compiled
+
+
+def _vip_form_roll(bounds):
+    return bounds[0] + secrets.randbelow(bounds[1] - bounds[0] + 1)
+
+
+def _prepare_vip_form_quantities(compiled, selected, amounts, vip_items, vip_orbs):
+    """数量は1項目ごと、配列は選択された種類ごとに独立抽選する。"""
+    selected, amounts, vip_items = copy.deepcopy(selected), dict(amounts), copy.deepcopy(vip_items or {})
+    vip_orbs = copy.deepcopy(vip_orbs)
+    original_actions = set().union(*(set(values) for values in selected.values()))
+    for key, spec in compiled.get("quantities", {}).items():
+        group, bounds = spec["group"], spec["bounds"]
+        if group is None:
+            amounts[key] = _vip_form_roll(bounds)
+        elif group == "talent_orbs":
+            ids = (list(vip_orbs) if vip_orbs is not None and original_actions.intersection({"talent_orbs", "custom_talent_orbs"})
+                   else spec["ids"])
+            ids = [int(cid) for cid in ids if int(cid) in spec["ids"]]
+            vip_orbs = {cid: _vip_form_roll(bounds) for cid in ids}
+        else:
+            ids = (list(vip_items[group]) if group in vip_items and original_actions.intersection(VIP_ITEM_SELECTED_VALUES[group])
+                   else spec["ids"])
+            ids = [int(cid) for cid in ids if int(cid) in spec["ids"]]
+            vip_items[group] = {cid: _vip_form_roll(bounds) for cid in ids}
+        selected.setdefault("s4", [])
+        if key not in selected["s4"]:
+            selected["s4"].append(key)
+    return selected, amounts, vip_items, vip_orbs
+
+
+def _apply_vip_form_levels(save, compiled, previous):
+    """保持する基本Lv・＋値と除外対象は、一括設定前の値へ戻す。"""
+    logs, counts = [], {}
+    for target in compiled.get("levels", []):
+        cid = target["id"]
+        cat = save.cats.get_cat_by_id(cid - 1)
+        if cat is None or cid not in previous:
+            raise RuntimeError(f"レベル対象No.{cid}の保存枠を確認できません。")
+        old_base, old_plus = previous[cid]
+        cat.upgrade.base = old_base if target["base"] is None else _vip_form_roll(target["base"]) - 1
+        cat.upgrade.plus = old_plus if target["plus"] is None else _vip_form_roll(target["plus"])
+        counts[target["rarity"]] = counts.get(target["rarity"], 0) + 1
+    labels = ["基本", "EX", "レア", "激レア", "超激レア", "伝説レア"]
+    logs.extend(f"{labels[rarity]}の詳細レベル指定({count}体)" for rarity, count in sorted(counts.items()))
+    for cid in compiled.get("excluded_ids", []):
+        cat = save.cats.get_cat_by_id(cid - 1)
+        if cat is None or cid not in previous:
+            raise RuntimeError(f"除外対象No.{cid}の保存枠を確認できません。")
+        cat.upgrade.base, cat.upgrade.plus = previous[cid]
+    if compiled.get("excluded_ids"):
+        logs.append(f"レベル除外・元の基本Lvと＋値を保持({len(compiled['excluded_ids'])}体)")
+    logs.extend(f"{VIP_FORM_QUANTITIES[key][0]}の範囲指定({spec['bounds'][0]}〜{spec['bounds'][1]})"
+                for key, spec in compiled.get("quantities", {}).items())
+    return logs
 
 
 def safe_character_settings(data):
@@ -5837,6 +6032,11 @@ def apply_daiko_segment(save, selected_items: list, char_list: list, custom_amou
 
 
 def _apply_all_segments_unlocked(save_file, selected, char_list, custom_amounts, custom_playtime="", main_story_chapters=None, vip_items=None, legend_stages=None, vip_facilities=None, vip_talent_orbs=None, special_stages=None, character_settings=None, main_story_stages=None, event_stage_settings=None, lineup_settings=None, ototo_settings=None, dojo_score_settings=None, future_score_settings=None):
+    extras = custom_amounts.get("_vip_form_extras", {})
+    previous_levels = {cat.id + 1: (cat.upgrade.base, cat.upgrade.plus) for cat in save_file.cats.cats} if extras else {}
+    if extras:
+        selected, custom_amounts, vip_items, vip_talent_orbs = _prepare_vip_form_quantities(
+            extras, selected, custom_amounts, vip_items, vip_talent_orbs)
     final_logs = apply_vip_items(save_file, vip_items)
     final_logs.extend(apply_legend_stages(save_file, legend_stages))
     final_logs.extend(apply_vip_facilities(save_file, vip_facilities))
@@ -5900,6 +6100,8 @@ def _apply_all_segments_unlocked(save_file, selected, char_list, custom_amounts,
             main_story_chapters,
             character_settings if i == 3 else None,
         ))
+    if extras:
+        final_logs.extend(_apply_vip_form_levels(save_file, extras, previous_levels))
     # 形態を扱う操作時だけ既存の不可能な状態も修復する。通常のアイテム・
     # ステージ操作で、配布metadataより新しい実機形態を触らないための制限。
     form_actions = {"form_specific", "true_form_specific", "true_form_all"}
@@ -6591,6 +6793,15 @@ def api_run_daiko():
     if not is_vip_confirmed:
         return vip_required_response()
     if is_vip_confirmed:
+        try:
+            extras = compile_vip_form_extras(data)
+        except (ValueError, TypeError, KeyError) as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            print(f"[VIP FORM] metadata unavailable: {type(exc).__name__}")
+            return jsonify({"error": "詳細設定に必要な定義を確認できません。少し待って再実行してください。"}), 503
+        if extras:
+            custom_amounts["_vip_form_extras"] = extras
         main_story_chapters = safe_main_story_chapters(data)
         main_story_stages = safe_main_story_stages(data)
         event_stage_settings = safe_event_stage_settings(data)
@@ -6715,6 +6926,15 @@ def api_run_create():
     if not is_vip_confirmed:
         return vip_required_response()
     if is_vip_confirmed:
+        try:
+            extras = compile_vip_form_extras(data)
+        except (ValueError, TypeError, KeyError) as exc:
+            return jsonify({"error": str(exc)}), 400
+        except Exception as exc:
+            print(f"[VIP FORM] metadata unavailable: {type(exc).__name__}")
+            return jsonify({"error": "詳細設定に必要な定義を確認できません。少し待って再実行してください。"}), 503
+        if extras:
+            custom_amounts["_vip_form_extras"] = extras
         count = safe_count(data)
         account_type_key = safe_account_type(data)
         main_story_chapters = safe_main_story_chapters(data)
@@ -7149,7 +7369,7 @@ def _theme_videos():
 
 @app.context_processor
 def _theme_context():
-    default_name = "minecraft_bg.mp4"
+    default_name = "grassland (shadow).mp4"
     if not os.path.isfile(os.path.join(THEME_VIDEO_DIR, default_name)):
         videos = _theme_videos()
         default_name = videos[0] if videos else ""
