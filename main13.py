@@ -1295,8 +1295,19 @@ def _vip_form_collaboration_ids(metadata, required):
 def compile_vip_form_extras(data):
     """認証済みのVIP入力を、引き継ぎ取得前に検証済みの対象へ固定する。"""
     raw = data.get("vip_form_extras", {})
-    if not isinstance(raw, dict) or set(raw) - {"quantities", "levels", "excluded_ids", "plus_supported_only", "orb_rank"}:
+    if not isinstance(raw, dict) or set(raw) - {"quantities", "levels", "excluded_ids", "plus_supported_only", "orb_rank", "conditional"}:
         raise ValueError("追加の詳細設定が不正です。")
+    if raw.get("conditional") is not None:
+        from vip_conditions.validation import compile_public
+        if any(raw.get(key) for key in ("quantities", "levels", "excluded_ids")):
+            raise ValueError("条件付き指定と範囲指定・レア度別指定は別々に実行してください。保持や固定値も条件付き欄に追加できます。")
+        if any(data.get("selected", {}).values()) or data.get("char_list") or data.get("character_settings"):
+            raise ValueError("条件付き指定を使う場合は、通常の一括選択・個別キャラ選択を解除してください。")
+        if any(data.get(key) for key in ("vip_items", "legend_stages", "vip_facilities", "vip_talent_orbs", "special_stages", "main_story_stages", "event_stage_settings", "lineup_settings", "ototo_settings", "dojo_score_settings", "future_score_settings", "labyrinth_characters", "custom_playtime")):
+            raise ValueError("条件付き指定と通常の詳細指定は別々に実行してください。")
+        if data.get("account_type", "new") != "new":
+            raise ValueError("条件付き作成では新規アカウントを選択してください。")
+        return {"conditional": compile_public(globals(), raw["conditional"])}
     quantities, levels, excluded = raw.get("quantities", {}), raw.get("levels", {}), raw.get("excluded_ids", [])
     if (not isinstance(quantities, dict) or len(quantities) > len(VIP_FORM_QUANTITIES)
             or not isinstance(levels, dict) or len(levels) > 6
@@ -6033,6 +6044,10 @@ def apply_daiko_segment(save, selected_items: list, char_list: list, custom_amou
 
 def _apply_all_segments_unlocked(save_file, selected, char_list, custom_amounts, custom_playtime="", main_story_chapters=None, vip_items=None, legend_stages=None, vip_facilities=None, vip_talent_orbs=None, special_stages=None, character_settings=None, main_story_stages=None, event_stage_settings=None, lineup_settings=None, ototo_settings=None, dojo_score_settings=None, future_score_settings=None):
     extras = custom_amounts.get("_vip_form_extras", {})
+    if "conditional" in extras:
+        from types import SimpleNamespace
+        from vip_conditions.engine import apply_conditional
+        return apply_conditional(SimpleNamespace(**globals()), save_file, extras["conditional"])
     previous_levels = {cat.id + 1: (cat.upgrade.base, cat.upgrade.plus) for cat in save_file.cats.cats} if extras else {}
     if extras:
         selected, custom_amounts, vip_items, vip_talent_orbs = _prepare_vip_form_quantities(
