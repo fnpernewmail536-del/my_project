@@ -20,7 +20,7 @@
     return {background:''};
   }
   function save(background,layout,language){
-    const value=['classic','simple','dark','eva','eva-amber'].includes(layout)?layout:'classic';
+    const value=['simple','dark'].includes(layout)?layout:'simple';
     localStorage.setItem(KEY,JSON.stringify({background:typeof background==='string'?background:''}));
     localStorage.removeItem(LEGACY_KEY);
     if(language!==undefined)document.cookie=`catps_lang=${language==='en'?'en':'ja'}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol==='https:'?'; Secure':''}`;

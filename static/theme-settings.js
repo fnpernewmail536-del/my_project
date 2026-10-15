@@ -25,9 +25,9 @@
   };
   document.getElementById('preview').onclick=()=>{if(save())location.href='/';};
   document.getElementById('reset-all').onclick=()=>{
-    layout.value='classic';video.value='';
+    layout.value='simple';video.value='';
     if(!save())return;
-    try{sessionStorage.setItem(noticeKey,'全ページを標準のクラシックに戻しました。');}catch{}
+    try{sessionStorage.setItem(noticeKey,'全ページを標準の白テーマに戻しました。');}catch{}
     location.reload();
   };
   try{

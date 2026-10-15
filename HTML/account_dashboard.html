@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ ui_language|default('ja') }}" class="theme-{{ theme_layout|default('classic') }}">
+<html lang="{{ ui_language|default('ja') }}" class="theme-{{ theme_layout|default('simple') }}">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark">
   <title>マイアカウント | CatProxyService</title>
@@ -614,6 +614,6 @@ document.querySelectorAll('[data-status]').forEach(el=>el.textContent=labels[el.
 function updateTrial(){const box=document.getElementById('trial'),out=document.getElementById('trial-time');if(!box||!out)return;const seconds=Math.max(0,Math.ceil(Number(box.dataset.expires)-Date.now()/1000));if(!seconds){box.hidden=true;return;}out.textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;}updateTrial();setInterval(updateTrial,1000);
 </script>
 
-<script src="/static/theme-local.js?v=34" defer></script>
+<script src="/static/theme-local.js?v=38" defer></script>
 </body>
 </html>
