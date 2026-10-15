@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ ui_language|default('ja') }}" class="theme-{{ theme_layout|default('classic') }}">
+<html lang="{{ ui_language|default('ja') }}" class="theme-{{ theme_layout|default('simple') }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -606,6 +606,6 @@ body:after{box-shadow:inset 0 0 70px rgba(0,0,0,.10)!important;}
     document.addEventListener('DOMContentLoaded',async()=>{const message=document.getElementById('message');try{document.getElementById('access-fingerprint').value=await browserFingerprint();document.getElementById('access-form').submit();}catch(error){message.textContent=error.message||'アクセス確認に失敗しました。';message.className='error';document.querySelector('.spinner').hidden=true;}});
   </script>
 
-<script src="/static/theme-local.js?v=34" defer></script>
+<script src="/static/theme-local.js?v=38" defer></script>
 </body>
 </html>

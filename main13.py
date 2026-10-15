@@ -7362,12 +7362,12 @@ THEME_VIDEO_DIR = os.path.join(base_dir, "static", "videos")
 THEME_ALLOWED_VIDEO_EXT = {".mp4", ".webm", ".ogg", ".mov"}
 
 def selected_ui_layout():
-    value = request.cookies.get("catps_layout", "classic")
-    return value if value in {"classic", "simple", "dark", "eva", "eva-amber"} else "classic"
+    value = request.cookies.get("catps_layout", "simple")
+    return value if value in {"simple", "dark"} else "simple"
 
 
 def ui_page_template(classic_name):
-    if selected_ui_layout() in {"simple", "dark", "eva", "eva-amber"}:
+    if selected_ui_layout() in {"simple", "dark"}:
         stem, extension = os.path.splitext(classic_name)
         return stem + "_simple" + extension
     return classic_name
