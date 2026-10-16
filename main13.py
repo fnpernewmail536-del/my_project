@@ -6901,11 +6901,14 @@ def api_run_daiko():
         return jsonify({"error": "処理を開始できませんでした"}), 503
     register_job_to_session(job_id)
     try:
+        chat_execution = request.environ.get("catproxy.chat_execution")
+        chat_kwargs = {"chat_execution": chat_execution} if chat_execution else {}
         executor.submit(
-            run_job_daiko,
+            run_render_chat_job if chat_execution else run_job_daiko,
             job_id, operation_id, str(data.get("transfer_code", "")).strip(), str(data.get("auth_code", "")).strip(),
             selected_payload, data.get("char_list", []), custom_amounts, custom_playtime, main_story_chapters, vip_items, legend_stages, vip_facilities, vip_talent_orbs, special_stages, character_settings, main_story_stages, event_stage_settings, lineup_settings, ototo_settings, dojo_score_settings, future_score_settings,
             "VIP" if is_vip_confirmed else "free",
+            **chat_kwargs,
         )
     except Exception as exc:
         error_text = _safe_error_message(exc)
@@ -7593,9 +7596,15 @@ def api_game_update_status():
 _start_game_auto_updates()
 
 
+# Use the existing Flask application and job/recovery pipeline.
+import sys
+from local_chat.web import install_chat
+install_chat(sys.modules[__name__])
+
 if __name__ == "__main__":
     print("=" * 50)
     print("CatProxyService - Web版")
     print("=" * 50)
     app.run(host='0.0.0.0', port=5001, debug=True)
+
 

@@ -1,0 +1,906 @@
+{
+  "recognized": [
+    {
+      "input": "猫缶の数を4.5万にしてね",
+      "expected": {
+        "custom_amounts.custom_catfood": 45000
+      }
+    },
+    {
+      "input": "猫缶は4万でお願いします",
+      "expected": {
+        "custom_amounts.custom_catfood": 40000
+      }
+    },
+    {
+      "input": "猫缶は40kにして",
+      "expected": {
+        "custom_amounts.custom_catfood": 40000
+      }
+    },
+    {
+      "input": "猫缶は40,000でお願い",
+      "expected": {
+        "custom_amounts.custom_catfood": 40000
+      }
+    },
+    {
+      "input": "XPを9000万でお願い",
+      "expected": {
+        "custom_amounts.custom_xp": 90000000
+      }
+    },
+    {
+      "input": "XPを1.2mにして",
+      "expected": {
+        "custom_amounts.custom_xp": 1200000
+      }
+    },
+    {
+      "input": "NPを5千でお願いします",
+      "expected": {
+        "custom_amounts.custom_np": 5000
+      }
+    },
+    {
+      "input": "NPは4.5千でお願い",
+      "expected": {
+        "custom_amounts.custom_np": 4500
+      }
+    },
+    {
+      "input": "NPを5kにして",
+      "expected": {
+        "custom_amounts.custom_np": 5000
+      }
+    },
+    {
+      "input": "キャッツアイは各種200個でお願い",
+      "expected": {
+        "custom_amounts.custom_catseyes": 200
+      }
+    },
+    {
+      "input": "ネコビタンの数を300に",
+      "expected": {
+        "custom_amounts.custom_catamins": 300
+      }
+    },
+    {
+      "input": "リーダシップ200",
+      "expected": {
+        "custom_amounts.custom_leadership": 200
+      }
+    },
+    {
+      "input": "バトルアイテム各種300にして",
+      "expected": {
+        "custom_amounts.custom_battle_items": 300
+      }
+    },
+    {
+      "input": "レアチケットの枚数を300にしてほしい",
+      "expected": {
+        "custom_amounts.custom_rare_tickets": 300
+      }
+    },
+    {
+      "input": "プラチナ券を20枚にして",
+      "expected": {
+        "custom_amounts.custom_platinum_tickets": 20
+      }
+    },
+    {
+      "input": "レジェンド券を10枚でお願いします",
+      "expected": {
+        "custom_amounts.custom_legend_tickets": 10
+      }
+    },
+    {
+      "input": "普通のチケットは500枚にして",
+      "expected": {
+        "custom_amounts.custom_normal_tickets": 500
+      }
+    },
+    {
+      "input": "本能玉Sランクのみ各10個、他はそのまま",
+      "expected": {
+        "orb_s_amount": 10
+      }
+    },
+    {
+      "input": "またたびの数を998個にして",
+      "expected": {
+        "custom_amounts.custom_matatabi": 998,
+        "fruit_filters.matatabi": 998
+      }
+    },
+    {
+      "input": "本能玉を998個にして",
+      "expected": {
+        "custom_amounts.custom_talent_orbs": 998
+      }
+    },
+    {
+      "input": "猫缶は触らないで",
+      "label_keys": [
+        "exclude_catfood"
+      ]
+    },
+    {
+      "input": "NPはそのまま",
+      "label_keys": [
+        "exclude_np"
+      ]
+    },
+    {
+      "input": "プラチケは変更しないでください",
+      "label_keys": [
+        "exclude_platinum_tickets"
+      ]
+    },
+    {
+      "input": "ネコビタンはいらない",
+      "label_keys": [
+        "exclude_catamins"
+      ]
+    },
+    {
+      "input": "猫缶とXPは触らない",
+      "label_keys": [
+        "exclude_catfood",
+        "exclude_xp"
+      ]
+    },
+    {
+      "input": "チケットはレアだけカンスト",
+      "expected": {
+        "selected.s1": [
+          "rare_tickets"
+        ]
+      }
+    },
+    {
+      "input": "レアチケだけ200枚、他はそのまま",
+      "expected": {
+        "selected.s1": [
+          "custom_rare_tickets"
+        ],
+        "custom_amounts.custom_rare_tickets": 200
+      }
+    },
+    {
+      "input": "アイテム全部カンスト（猫缶とNP以外）",
+      "contains": {
+        "selected.s1": [
+          "xp",
+          "catseyes"
+        ]
+      },
+      "absent": {
+        "selected.s1": [
+          "catfood",
+          "np",
+          "custom_catfood",
+          "custom_np"
+        ]
+      }
+    },
+    {
+      "input": "全てのキャラのレベルを50、プラス値を10にして",
+      "expected": {
+        "level_rules.2": {
+          "base": 50,
+          "plus": [
+            10,
+            10
+          ]
+        },
+        "level_rules.5": {
+          "base": 50,
+          "plus": [
+            10,
+            10
+          ]
+        }
+      }
+    },
+    {
+      "input": "レアキャラのレベルを50にして",
+      "expected": {
+        "level_rules.2": {
+          "base": 50,
+          "plus": "keep"
+        }
+      }
+    },
+    {
+      "input": "EXキャラのレベルを30プラス90にして",
+      "expected": {
+        "level_rules.1": {
+          "base": 30,
+          "plus": [
+            90,
+            90
+          ]
+        }
+      }
+    },
+    {
+      "input": "超激レアのレベルを40プラス10から15でお願い",
+      "expected": {
+        "level_rules.4": {
+          "base": 40,
+          "plus": [
+            10,
+            15
+          ]
+        }
+      }
+    },
+    {
+      "input": "基本キャラのレベルを20プラス90にして",
+      "expected": {
+        "level_rules.0": {
+          "base": 20,
+          "plus": [
+            90,
+            90
+          ]
+        }
+      }
+    },
+    {
+      "input": "伝説レアのレベルを50プラス3にして",
+      "expected": {
+        "level_rules.5": {
+          "base": 50,
+          "plus": [
+            3,
+            3
+          ]
+        }
+      }
+    },
+    {
+      "input": "コラボのプラスだけ10から15でお願いします",
+      "expected": {
+        "plus_only_rules.collab": [
+          10,
+          15
+        ]
+      }
+    },
+    {
+      "input": "伝説レアはプラス3でお願いします",
+      "expected": {
+        "plus_only_rules.rarity:5": [
+          3,
+          3
+        ]
+      }
+    },
+    {
+      "input": "本体レベルは変更しないでください",
+      "expected": {
+        "preserve_base_levels": true
+      }
+    },
+    {
+      "input": "＋値のみ変えて",
+      "expected": {
+        "preserve_base_levels": true
+      }
+    },
+    {
+      "input": "コラボキャラ（＋10〜15）",
+      "expected": {
+        "plus_only_rules.collab": [
+          10,
+          15
+        ]
+      }
+    },
+    {
+      "input": "伝説もプラス3z",
+      "expected": {
+        "plus_only_rules.rarity:5": [
+          3,
+          3
+        ]
+      }
+    },
+    {
+      "input": "全キャラを開放してほしい",
+      "expected": {
+        "selected.s3": [
+          "unlock_all_cats"
+        ]
+      }
+    },
+    {
+      "input": "キャラを全員解放してください",
+      "expected": {
+        "selected.s3": [
+          "unlock_all_cats"
+        ]
+      }
+    },
+    {
+      "input": "URの報酬を全部受け取り済みにして",
+      "expected": {
+        "selected.s4": [
+          "user_rank_rewards_claimed"
+        ]
+      }
+    },
+    {
+      "input": "ユーザーランク報酬を全て未受け取りにして",
+      "expected": {
+        "selected.s4": [
+          "user_rank_rewards_unclaimed"
+        ]
+      }
+    },
+    {
+      "input": "猫図鑑の報酬を全部未受取に設定してください",
+      "expected": {
+        "selected.s4": [
+          "catguide_rewards_unclaimed"
+        ]
+      }
+    },
+    {
+      "input": "にゃんこ図鑑報酬を全て受け取り済みにして",
+      "expected": {
+        "selected.s4": [
+          "catguide_rewards_claimed"
+        ]
+      }
+    },
+    {
+      "input": "スクラッチを未実施の状態にして",
+      "expected": {
+        "selected.s4": [
+          "cat_scratcher_reset"
+        ]
+      }
+    },
+    {
+      "input": "ゴールド会員にして",
+      "expected": {
+        "selected.s4": [
+          "gold_membership"
+        ]
+      }
+    },
+    {
+      "input": "編成スロットを上限までにして",
+      "expected": {
+        "selected.s4": [
+          "slots_max"
+        ]
+      }
+    },
+    {
+      "input": "にゃんこ神社を最大までにして",
+      "expected": {
+        "selected.s4": [
+          "cat_shrine_max"
+        ]
+      }
+    },
+    {
+      "input": "オトートの城を全部MAXにして",
+      "expected": {
+        "selected.s4": [
+          "ototo_max"
+        ]
+      }
+    },
+    {
+      "input": "施設を全て最大にして",
+      "expected": {
+        "selected.s2": [
+          "base_upgrades_max"
+        ]
+      }
+    },
+    {
+      "input": "エラーキャラを消して",
+      "expected": {
+        "selected.s3": [
+          "remove_error_cats"
+        ]
+      }
+    },
+    {
+      "input": "全ステージをクリアしてお宝もMAX",
+      "expected": {
+        "selected.s2": [
+          "all_stage_clear"
+        ]
+      }
+    },
+    {
+      "input": "ステージを全部クリアして、お宝も全部MAXにして",
+      "expected": {
+        "selected.s2": [
+          "all_stage_clear"
+        ]
+      }
+    },
+    {
+      "input": "真レジェ全部全クリ",
+      "expected": {
+        "selected.s2": [
+          "true_legend_clear"
+        ]
+      }
+    },
+    {
+      "input": "零レジェンドを全てクリアして",
+      "expected": {
+        "selected.s2": [
+          "zero_legend_clear"
+        ]
+      }
+    },
+    {
+      "input": "旧レジェを全部クリアして",
+      "expected": {
+        "selected.s2": [
+          "legend_clear"
+        ]
+      }
+    },
+    {
+      "input": "ゾンビを全クリして",
+      "expected": {
+        "selected.s2": [
+          "zombie_clear"
+        ]
+      }
+    },
+    {
+      "input": "魔界編を全部クリアして",
+      "expected": {
+        "selected.s2": [
+          "aku_clear"
+        ]
+      }
+    },
+    {
+      "input": "道場スコアを1.2万点にして",
+      "expected": {
+        "dojo_score_settings.hall_of_initiates": 12000
+      }
+    },
+    {
+      "input": "未来編の採点を全部9000にして",
+      "expected": {
+        "future_score_settings": {
+          "3": 9000,
+          "4": 9000,
+          "5": 9000
+        }
+      }
+    },
+    {
+      "input": "ガマトトのレベルを30にして",
+      "expected": {
+        "gamatoto_level": 30
+      }
+    },
+    {
+      "input": "プレイ時間を8000から8200時間の間でランダム",
+      "range_hours": [
+        8000,
+        8200
+      ]
+    },
+    {
+      "input": "上級者アカウントを作って",
+      "pending_numbers": [
+        3
+      ]
+    },
+    {
+      "input": "日本編を全章クリアして",
+      "pending_numbers": [
+        39
+      ]
+    },
+    {
+      "input": "メニュー4を40000にして",
+      "expected": {
+        "custom_amounts.custom_catfood": 40000
+      }
+    },
+    {
+      "input": "4番を4万にして",
+      "expected": {
+        "custom_amounts.custom_catfood": 40000
+      }
+    },
+    {
+      "input": "猫缶とXPはMAX",
+      "expected": {
+        "selected.s1": [
+          "catfood",
+          "xp"
+        ]
+      }
+    },
+    {
+      "input": "NPとリーダーシップを300にして",
+      "expected": {
+        "custom_amounts.custom_np": 300,
+        "custom_amounts.custom_leadership": 300
+      }
+    },
+    {
+      "input": "バトルアイテムとキャッツアイは各200個でお願いします",
+      "expected": {
+        "custom_amounts.custom_battle_items": 200,
+        "custom_amounts.custom_catseyes": 200
+      }
+    },
+    {
+      "input": "猫缶・XPを4万にして",
+      "expected": {
+        "custom_amounts.custom_catfood": 40000,
+        "custom_amounts.custom_xp": 40000
+      }
+    },
+    {
+      "input": "普通のチケットとレアチケットを300枚でお願いします",
+      "expected": {
+        "custom_amounts.custom_normal_tickets": 300,
+        "custom_amounts.custom_rare_tickets": 300
+      }
+    },
+    {
+      "input": "プラチナ券/レジェンド券は99枚にして",
+      "expected": {
+        "custom_amounts.custom_platinum_tickets": 99,
+        "custom_amounts.custom_legend_tickets": 99
+      }
+    },
+    {
+      "input": "NP&リーダーシップは5千",
+      "expected": {
+        "custom_amounts.custom_np": 5000,
+        "custom_amounts.custom_leadership": 5000
+      }
+    },
+    {
+      "input": "キャッツアイとネコビタンの数を300に",
+      "expected": {
+        "custom_amounts.custom_catseyes": 300,
+        "custom_amounts.custom_catamins": 300
+      }
+    },
+    {
+      "input": "アイテムは猫缶とXPだけMAX",
+      "expected": {
+        "selected.s1": [
+          "catfood",
+          "xp"
+        ],
+        "fruit_filters": {}
+      }
+    },
+    {
+      "input": "猫缶だけ40000",
+      "expected": {
+        "selected.s1": [
+          "custom_catfood"
+        ],
+        "custom_amounts.custom_catfood": 40000
+      }
+    },
+    {
+      "input": "チケットはプラチケとレジェチケだけ99枚",
+      "expected": {
+        "selected.s1": [
+          "custom_platinum_tickets",
+          "custom_legend_tickets"
+        ]
+      }
+    },
+    {
+      "input": "チケットは銀チケだけ200",
+      "expected": {
+        "selected.s1": [
+          "custom_normal_tickets"
+        ],
+        "custom_amounts.custom_normal_tickets": 200
+      }
+    },
+    {
+      "input": "猫缶とNPのみ5000、他はそのまま",
+      "expected": {
+        "selected.s1": [
+          "custom_catfood",
+          "custom_np"
+        ],
+        "fruit_filters": {}
+      }
+    },
+    {
+      "input": "レアチケとプラチケだけMAX",
+      "expected": {
+        "selected.s1": [
+          "rare_tickets",
+          "platinum_tickets"
+        ]
+      }
+    },
+    {
+      "input": "アイテムは全部変更しない",
+      "expected": {
+        "fruit_filters": {},
+        "plus_only_rules": {}
+      }
+    },
+    {
+      "input": "チケットはそのまま",
+      "expected": {
+        "plus_only_rules": {}
+      }
+    },
+    {
+      "input": "キャラレベルは変更しない",
+      "expected": {
+        "level_rules": {},
+        "plus_only_rules": {}
+      }
+    },
+    {
+      "input": "やっぱり猫缶は5万にして",
+      "expected": {
+        "custom_amounts.custom_catfood": 50000
+      }
+    },
+    {
+      "input": "訂正：NPは4.5千でお願い",
+      "expected": {
+        "custom_amounts.custom_np": 4500
+      }
+    },
+    {
+      "input": "修正：プラチケは20枚に",
+      "expected": {
+        "custom_amounts.custom_platinum_tickets": 20
+      }
+    },
+    {
+      "input": "猫缶は4万じゃなくて5万でお願いします",
+      "expected": {
+        "custom_amounts.custom_catfood": 50000
+      }
+    },
+    {
+      "input": "XPを8000万ではなく9000万にして",
+      "expected": {
+        "custom_amounts.custom_xp": 90000000
+      }
+    },
+    {
+      "input": "NP5000じゃなく4000",
+      "expected": {
+        "custom_amounts.custom_np": 4000
+      }
+    },
+    {
+      "input": "猫缶は5万8999にして",
+      "expected": {
+        "custom_amounts.custom_catfood": 58999
+      }
+    },
+    {
+      "input": "NPは0万5000でお願い",
+      "expected": {
+        "custom_amounts.custom_np": 5000
+      }
+    },
+    {
+      "input": "XPを9999万9999にして",
+      "expected": {
+        "custom_amounts.custom_xp": 99999999
+      }
+    },
+    {
+      "input": "全キャラのプラス値だけMAXにして",
+      "expected": {
+        "plus_only_rules.all": "max"
+      }
+    },
+    {
+      "input": "全てのキャラのプラスを10から15にして",
+      "expected": {
+        "plus_only_rules.all": [
+          10,
+          15
+        ]
+      }
+    },
+    {
+      "input": "全キャラプラスはそのまま",
+      "expected": {
+        "plus_only_rules.all": "keep"
+      }
+    },
+    {
+      "input": "コラボのプラスは変更しない",
+      "expected": {
+        "plus_only_rules.collab": "keep"
+      }
+    },
+    {
+      "input": "伝説レアのプラスなしでお願いします",
+      "expected": {
+        "plus_only_rules.rarity:5": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "input": "レアのレベルは50、プラスはそのまま",
+      "expected": {
+        "level_rules.2": {
+          "base": 50,
+          "plus": "keep"
+        },
+        "plus_only_rules.rarity:2": "keep"
+      }
+    },
+    {
+      "input": "レア50（プラスはそのまま）",
+      "expected": {
+        "level_rules.2": {
+          "base": 50,
+          "plus": "keep"
+        },
+        "plus_only_rules.rarity:2": "keep"
+      }
+    },
+    {
+      "input": "EXのプラスは維持",
+      "expected": {
+        "plus_only_rules.rarity:1": "keep"
+      }
+    },
+    {
+      "input": "全キャラレベル50（＋はそのまま）",
+      "expected": {
+        "level_rules.5": {
+          "base": 50,
+          "plus": "keep"
+        },
+        "plus_only_rules.all": "keep"
+      }
+    },
+    {
+      "input": "NP以外のアイテムは全部MAX",
+      "absent": {
+        "selected.s1": [
+          "np",
+          "custom_np"
+        ]
+      },
+      "contains": {
+        "selected.s1": [
+          "catfood",
+          "xp"
+        ]
+      }
+    },
+    {
+      "input": "アイテムは猫缶とNP以外全部MAX",
+      "absent": {
+        "selected.s1": [
+          "catfood",
+          "np",
+          "custom_catfood",
+          "custom_np"
+        ]
+      },
+      "contains": {
+        "selected.s1": [
+          "xp",
+          "catseyes"
+        ]
+      }
+    },
+    {
+      "input": "プラチケとレジェチケ以外のチケットは全てMAX",
+      "absent": {
+        "selected.s1": [
+          "platinum_tickets",
+          "legend_tickets"
+        ]
+      },
+      "contains": {
+        "selected.s1": [
+          "normal_tickets",
+          "rare_tickets"
+        ]
+      }
+    },
+    {
+      "input": "チケット全部MAX（プラチケとレジェチケ以外）",
+      "absent": {
+        "selected.s1": [
+          "platinum_tickets",
+          "legend_tickets"
+        ]
+      },
+      "contains": {
+        "selected.s1": [
+          "normal_tickets",
+          "rare_tickets"
+        ]
+      }
+    },
+    {
+      "input": "チケットはレアチケ以外全部MAX",
+      "absent": {
+        "selected.s1": [
+          "rare_tickets"
+        ]
+      },
+      "contains": {
+        "selected.s1": [
+          "normal_tickets",
+          "platinum_tickets",
+          "legend_tickets"
+        ]
+      }
+    }
+  ],
+  "blocked": [
+    "猫缶40000にしないでください",
+    "NPは5千じゃない",
+    "レアキャラ以外を50にして",
+    "全ステージクリア、日本編だけ",
+    "キャラ全解放、指定キャラ以外",
+    "猫缶を減らして",
+    "キャラをいい感じにして",
+    "コラボ＋10〜15にしない",
+    "伝説レア＋3以外",
+    "上級者垢作成、BANされないようにして",
+    "全ステージをクリア（日本編だけ）",
+    "本能玉S以外10",
+    "レアだけ300",
+    "未来編の採点を9000にして",
+    "スコアをMAXにして",
+    "隊員のクラスだけ変えて",
+    "全キャラLv50（コラボ以外不要）",
+    "猫缶の数を1.5個にして",
+    "NPを-5千にして",
+    "猫缶は40,00でお願い",
+    "猫缶とNPだけ少し増やして",
+    "猫缶40000じゃなくXP50000",
+    "猫缶MAXではなく",
+    "猫缶の数を3.5個にして",
+    "猫缶とプラチケだけMAX",
+    "チケットは猫缶だけMAX",
+    "アイテムはプラチケ以外MAX",
+    "本能玉Sとキャッツアイだけ200",
+    "全キャラの＋値をいい感じにして",
+    "コラボ以外のプラス10〜15",
+    "プラス値は変えないかも",
+    "レア50（伝説だけ変えない）",
+    "アイテム変更しない以外",
+    "プラチケだけ20枚増やして",
+    "猫缶1万を足して",
+    "やっぱり減らして",
+    "全キャラプラス32768",
+    "猫缶は5万99999",
+    "猫缶を-5万9899",
+    "チケットMAX（NP以外）"
+  ]
+}
