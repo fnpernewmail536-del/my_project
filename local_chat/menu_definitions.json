@@ -1,0 +1,1134 @@
+{
+  "schema_version": 1,
+  "defined_on": "2026-10-13",
+  "title": "CatProxyService 代行メニュー",
+  "currency": "JPY",
+  "source": "ユーザー提供の1〜84番メニュー",
+  "amount_policy": "数量省略・MAXはmax_defaultsの既定値。指定数値と不要を優先。価格は操作量として解釈しない。",
+  "service_policy": {
+    "payment_within_minutes": 15,
+    "purchase_time_notice_allows_extension": true,
+    "review_requested_after_service": true,
+    "read_profile_requested": true,
+    "weekend_listing_response_target_hours": 1,
+    "preset_fastest_minutes_if_available": 5
+  },
+  "backup_policy": {
+    "menu_number": 64,
+    "meaning": "代行前アカウントデータ・入力コード・結果コードを保存・バックアップ",
+    "no_ban_prevention_guarantee": true
+  },
+  "items": [
+    {
+      "number": 1,
+      "group": "おまかせ",
+      "name": "初心者垢",
+      "price_jpy": 500,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "アカウント作成の接続は未実装です。",
+      "preset": {
+        "catfood": [
+          800,
+          2500
+        ],
+        "xp": [
+          800000,
+          4000000
+        ],
+        "progress": "日本編クリア・未来編1章0〜8ステージ",
+        "levels": "Lv10〜25前後",
+        "other": "アイテム・お宝・施設・城・ガマトト・神社・プレイ時間は範囲内でランダム"
+      }
+    },
+    {
+      "number": 2,
+      "group": "おまかせ",
+      "name": "中級者垢",
+      "price_jpy": 1500,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "アカウント作成の接続は未実装です。",
+      "preset": {
+        "catfood": [
+          3000,
+          7000
+        ],
+        "xp": [
+          8000000,
+          25000000
+        ],
+        "progress": "日本・未来編クリア・宇宙編1章8〜20ステージ",
+        "levels": "Lv20〜35前後・レア多め",
+        "treasures": "日本編全章・未来編2章まで最高",
+        "other": "チケット・アイテム・施設・城など毎回変動"
+      }
+    },
+    {
+      "number": 3,
+      "group": "おまかせ",
+      "name": "上級者垢",
+      "price_jpy": 3000,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "アカウント作成の接続は未実装です。",
+      "preset": {
+        "catfood": [
+          8000,
+          16000
+        ],
+        "xp": [
+          35000000,
+          75000000
+        ],
+        "progress": "宇宙編3章クリア・旧レジェンド1冠・真レジェンド8〜16章・大狂乱クリア相当",
+        "levels": "Lv30〜50前後・レア系多め",
+        "treasures": "日本編全章・未来編2章まで最高",
+        "other": "資源・施設・城・お宝・プレイ時間など範囲内でランダム"
+      }
+    },
+    {
+      "number": 4,
+      "group": "アイテム",
+      "name": "猫缶指定",
+      "price_jpy": 50,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "catfood",
+      "default_quantity": 58999
+    },
+    {
+      "number": 5,
+      "group": "アイテム",
+      "name": "XP指定",
+      "price_jpy": 50,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "xp",
+      "default_quantity": 99999999
+    },
+    {
+      "number": 6,
+      "group": "アイテム",
+      "name": "NP指定",
+      "price_jpy": 50,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "np",
+      "default_quantity": 9999
+    },
+    {
+      "number": 7,
+      "group": "アイテム",
+      "name": "リーダーシップ指定",
+      "price_jpy": 50,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "leadership",
+      "default_quantity": 999
+    },
+    {
+      "number": 8,
+      "group": "アイテム",
+      "name": "バトルアイテム全種類",
+      "price_jpy": 50,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "battle_items",
+      "individual_price_jpy": 50,
+      "default_quantity": 999
+    },
+    {
+      "number": 9,
+      "group": "アイテム",
+      "name": "キャッツアイ全種",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "catseyes",
+      "individual_price_jpy": 50,
+      "default_quantity": 999
+    },
+    {
+      "number": 10,
+      "group": "アイテム",
+      "name": "ネコビタン指定",
+      "price_jpy": 50,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "catamins",
+      "individual_price_jpy": 50,
+      "default_quantity": 999
+    },
+    {
+      "number": 11,
+      "group": "アイテム",
+      "name": "城の素材指定",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "base_materials",
+      "individual_price_jpy": 50,
+      "default_quantity": 999
+    },
+    {
+      "number": 12,
+      "group": "アイテム",
+      "name": "またたび全種類",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "fruit_filter",
+      "filter": "matatabi",
+      "individual_price_jpy": 100,
+      "default_quantity": 998
+    },
+    {
+      "number": 13,
+      "group": "アイテム",
+      "name": "本能玉指定",
+      "price_jpy": 200,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "talent_orbs",
+      "individual_price_jpy": 200,
+      "default_quantity": 998
+    },
+    {
+      "number": 14,
+      "group": "アイテム",
+      "name": "獣石",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "fruit_filter",
+      "filter": "stones",
+      "individual_price_jpy": 100,
+      "default_quantity": 999
+    },
+    {
+      "number": 15,
+      "group": "チケット類",
+      "name": "通常チケット指定",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "normal_tickets",
+      "default_quantity": 999
+    },
+    {
+      "number": 16,
+      "group": "チケット類",
+      "name": "レアチケット指定",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "rare_tickets",
+      "default_quantity": 999
+    },
+    {
+      "number": 17,
+      "group": "チケット類",
+      "name": "プラチケ指定",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "platinum_tickets",
+      "default_quantity": 99
+    },
+    {
+      "number": 18,
+      "group": "チケット類",
+      "name": "レジェチケ指定",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "resource",
+      "resource_key": "legend_tickets",
+      "default_quantity": 99
+    },
+    {
+      "number": 19,
+      "group": "チケット類",
+      "name": "イベントチケット指定",
+      "price_jpy": 100,
+      "billing_unit": "種類・対象",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "イベントチケットの種類・対象IDが必要です。",
+      "default_quantity": 999
+    },
+    {
+      "number": 20,
+      "group": "キャラ解放",
+      "name": "全キャラ開放",
+      "price_jpy": 200,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s3",
+      "action": "unlock_all_cats",
+      "notes": "対象は既存エンジンで確認できる実装済み定義。未実装の冠は作らない。"
+    },
+    {
+      "number": 21,
+      "group": "キャラ解放",
+      "name": "EXキャラ開放",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "unlock_rarity",
+      "rarity": 1
+    },
+    {
+      "number": 22,
+      "group": "キャラ解放",
+      "name": "レアキャラ開放",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "unlock_rarity",
+      "rarity": 2
+    },
+    {
+      "number": 23,
+      "group": "キャラ解放",
+      "name": "激レア開放",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "unlock_rarity",
+      "rarity": 3
+    },
+    {
+      "number": 24,
+      "group": "キャラ解放",
+      "name": "超激レア開放",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "unlock_rarity",
+      "rarity": 4
+    },
+    {
+      "number": 25,
+      "group": "キャラ解放",
+      "name": "伝説レア開放",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "unlock_rarity",
+      "rarity": 5
+    },
+    {
+      "number": 26,
+      "group": "キャラ解放",
+      "name": "コラボ別開放",
+      "price_jpy": 150,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "コラボ名と対象キャラの指定が必要です。"
+    },
+    {
+      "number": 27,
+      "group": "キャラ解放",
+      "name": "指定キャラ1体開放",
+      "price_jpy": 150,
+      "billing_unit": "件",
+      "parameter_default": "対象必須",
+      "status": "ready",
+      "kind": "unlock_named",
+      "target_required": true,
+      "requires": "キャラ名またはNo.番号を照合し、対象確認後に解放します。",
+      "aliases": ["指定キャラ解放", "指定キャラ開放"]
+    },
+    {
+      "number": 28,
+      "group": "キャラ解放",
+      "name": "その他の条件で開放",
+      "price_jpy": 150,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "バージョン・属性・特性など対象条件が必要です。"
+    },
+    {
+      "number": 29,
+      "group": "レベル変更",
+      "name": "全キャラのレベル変更",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "levels",
+      "rarities": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "notes": "対象は既存エンジンで確認できる実装済み定義。未実装の冠は作らない。",
+      "default_base_level": 60,
+      "default_plus_level": 90
+    },
+    {
+      "number": 30,
+      "group": "レベル変更",
+      "name": "EXのレベル変更",
+      "price_jpy": 50,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "levels",
+      "rarities": [
+        1
+      ],
+      "default_base_level": 60,
+      "default_plus_level": 90
+    },
+    {
+      "number": 31,
+      "group": "レベル変更",
+      "name": "レアのレベル変更",
+      "price_jpy": 75,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "levels",
+      "rarities": [
+        2
+      ],
+      "default_base_level": 60,
+      "default_plus_level": 90
+    },
+    {
+      "number": 32,
+      "group": "レベル変更",
+      "name": "激レアのレベル変更",
+      "price_jpy": 75,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "levels",
+      "rarities": [
+        3
+      ],
+      "default_base_level": 60,
+      "default_plus_level": 90
+    },
+    {
+      "number": 33,
+      "group": "レベル変更",
+      "name": "超激レアのレベル変更",
+      "price_jpy": 75,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "levels",
+      "rarities": [
+        4
+      ],
+      "default_base_level": 60,
+      "default_plus_level": 90
+    },
+    {
+      "number": 34,
+      "group": "レベル変更",
+      "name": "伝説レアのレベル変更",
+      "price_jpy": 75,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "levels",
+      "rarities": [
+        5
+      ],
+      "default_base_level": 60,
+      "default_plus_level": 90
+    },
+    {
+      "number": 35,
+      "group": "レベル変更",
+      "name": "コラボ別のレベル変更",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "コラボ名とレベル指定が必要です。"
+    },
+    {
+      "number": 36,
+      "group": "レベル変更",
+      "name": "指定キャラ1体のレベル変更",
+      "price_jpy": 150,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "キャラ名またはIDとレベル指定が必要です。"
+    },
+    {
+      "number": 37,
+      "group": "レベル変更",
+      "name": "その他の条件でレベル変更",
+      "price_jpy": 150,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象条件とレベル指定が必要です。"
+    },
+    {
+      "number": 38,
+      "group": "ステージ・お宝",
+      "name": "全ステージ",
+      "price_jpy": 250,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s2",
+      "action": "all_stage_clear",
+      "notes": "対象は既存エンジンで確認できる実装済み定義。未実装の冠は作らない。"
+    },
+    {
+      "number": 39,
+      "group": "ステージ・お宝",
+      "name": "日本編",
+      "price_jpy": 50,
+      "billing_unit": "章",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象章の指定が必要です（全章の場合も明記）。"
+    },
+    {
+      "number": 40,
+      "group": "ステージ・お宝",
+      "name": "未来編",
+      "price_jpy": 100,
+      "billing_unit": "章",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象章の指定が必要です（全章の場合も明記）。"
+    },
+    {
+      "number": 41,
+      "group": "ステージ・お宝",
+      "name": "宇宙編",
+      "price_jpy": 150,
+      "billing_unit": "章",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象章の指定が必要です（全章の場合も明記）。"
+    },
+    {
+      "number": 42,
+      "group": "ステージ・お宝",
+      "name": "クリア回数指定",
+      "price_jpy": 100,
+      "billing_unit": "章",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象章・ステージ・クリア回数が必要です。"
+    },
+    {
+      "number": 43,
+      "group": "ステージ・お宝",
+      "name": "ステージ進行度調整",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象章・ステージ・進行状態が必要です。"
+    },
+    {
+      "number": 44,
+      "group": "採点スコア・道場",
+      "name": "未来編採点スコア指定（各章）",
+      "price_jpy": 150,
+      "billing_unit": "章",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象章とスコア指定が必要です。"
+    },
+    {
+      "number": 45,
+      "group": "採点スコア・道場",
+      "name": "未来編採点スコア指定（各ステージ）",
+      "price_jpy": 50,
+      "billing_unit": "ステージ",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象ステージとスコア指定が必要です。"
+    },
+    {
+      "number": 46,
+      "group": "採点スコア・道場",
+      "name": "未来編採点スコア指定（全ステージ）",
+      "price_jpy": 200,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "future_scores",
+      "max_score": 9999
+    },
+    {
+      "number": 47,
+      "group": "採点スコア・道場",
+      "name": "道場スコア指定",
+      "price_jpy": 150,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "dojo_score",
+      "max_score": 2147483647
+    },
+    {
+      "number": 48,
+      "group": "ゾンビ",
+      "name": "ゾンビ全ステージクリア",
+      "price_jpy": 300,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s2",
+      "action": "zombie_clear",
+      "notes": "対象は既存エンジンで確認できる実装済み定義。未実装の冠は作らない。"
+    },
+    {
+      "number": 49,
+      "group": "ゾンビ",
+      "name": "ゾンビ日本編",
+      "price_jpy": 100,
+      "billing_unit": "章",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象章の指定が必要です。"
+    },
+    {
+      "number": 50,
+      "group": "ゾンビ",
+      "name": "ゾンビ未来編",
+      "price_jpy": 150,
+      "billing_unit": "章",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象章の指定が必要です。"
+    },
+    {
+      "number": 51,
+      "group": "ゾンビ",
+      "name": "ゾンビ宇宙編",
+      "price_jpy": 200,
+      "billing_unit": "章",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象章の指定が必要です。"
+    },
+    {
+      "number": 52,
+      "group": "ゾンビ",
+      "name": "ゾンビステージ進行度調整",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象章・ステージ・進行状態が必要です。"
+    },
+    {
+      "number": 53,
+      "group": "魔界編",
+      "name": "魔界編クリア",
+      "price_jpy": 500,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s2",
+      "action": "aku_clear",
+      "notes": "対象は既存エンジンで確認できる実装済み定義。未実装の冠は作らない。"
+    },
+    {
+      "number": 54,
+      "group": "魔界編",
+      "name": "富士山EXクリア",
+      "price_jpy": 500,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "富士山EX専用の対象定義との接続は未実装です。"
+    },
+    {
+      "number": 55,
+      "group": "レジェンド＆その他",
+      "name": "旧レジェンドクリア（★4まで）",
+      "price_jpy": 500,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s2",
+      "action": "legend_clear",
+      "notes": "対象は既存エンジンで確認できる実装済み定義。未実装の冠は作らない。"
+    },
+    {
+      "number": 56,
+      "group": "レジェンド＆その他",
+      "name": "真レジェンドクリア（★4まで）",
+      "price_jpy": 600,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s2",
+      "action": "true_legend_clear",
+      "notes": "対象は既存エンジンで確認できる実装済み定義。未実装の冠は作らない。"
+    },
+    {
+      "number": 57,
+      "group": "レジェンド＆その他",
+      "name": "零レジェンドクリア（★4まで）",
+      "price_jpy": 700,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s2",
+      "action": "zero_legend_clear",
+      "notes": "対象は既存エンジンで確認できる実装済み定義。未実装の冠は作らない。"
+    },
+    {
+      "number": 58,
+      "group": "レジェンド＆その他",
+      "name": "レジェンドステージ進行度調整",
+      "price_jpy": 100,
+      "billing_unit": "種類・対象",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象系列・章・ステージ・進行状態が必要です。"
+    },
+    {
+      "number": 59,
+      "group": "レジェンド＆その他",
+      "name": "イベステクリア",
+      "price_jpy": 300,
+      "billing_unit": "種類・対象",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "イベント系統・対象ステージが必要です。"
+    },
+    {
+      "number": 60,
+      "group": "レジェンド＆その他",
+      "name": "以上全ステージクリア",
+      "price_jpy": 2000,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s2",
+      "action": "all_stage_clear",
+      "notes": "対象は既存エンジンで確認できる実装済み定義。未実装の冠は作らない。"
+    },
+    {
+      "number": 61,
+      "group": "その他メニュー",
+      "name": "施設レベル変更Lv.30",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "facilities",
+      "fixed_level": 30,
+      "individual_price_jpy": 50
+    },
+    {
+      "number": 62,
+      "group": "その他メニュー",
+      "name": "施設レベル変更指定",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "facilities",
+      "fixed_level": null,
+      "individual_price_jpy": 50
+    },
+    {
+      "number": 63,
+      "group": "その他メニュー",
+      "name": "エラーキャラ削除",
+      "price_jpy": 200,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s3",
+      "action": "remove_error_cats"
+    },
+    {
+      "number": 64,
+      "group": "その他メニュー",
+      "name": "BAN保障（代行前データの保存・バックアップ）",
+      "price_jpy": 500,
+      "billing_unit": "件",
+      "parameter_default": "代行前セーブ・コード情報を暗号化して保存",
+      "status": "ready",
+      "kind": "backup",
+      "aliases": [
+        "BAN保証",
+        "BAN保障"
+      ]
+    },
+    {
+      "number": 65,
+      "group": "その他メニュー",
+      "name": "アカウント複製",
+      "price_jpy": 500,
+      "billing_unit": "個",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "複製用の実行経路はローカルBotでは未実装です。"
+    },
+    {
+      "number": 66,
+      "group": "ガマトト＆オトート",
+      "name": "ガマトトレベル指定",
+      "price_jpy": 500,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "gamatoto_level"
+    },
+    {
+      "number": 67,
+      "group": "ガマトト＆オトート",
+      "name": "隊員追加",
+      "price_jpy": 50,
+      "billing_unit": "人",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "人数・隊員クラスの指定が必要です。"
+    },
+    {
+      "number": 68,
+      "group": "ガマトト＆オトート",
+      "name": "隊員クラスアップ",
+      "price_jpy": null,
+      "billing_unit": "人",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "対象隊員・変更後クラスの指定が必要です。",
+      "class_prices_jpy": {
+        "一人前": 25,
+        "熟練": 50,
+        "カリスマ": 100,
+        "レジェンド": 150
+      }
+    },
+    {
+      "number": 69,
+      "group": "ガマトト＆オトート",
+      "name": "オトート全城Lv.Max",
+      "price_jpy": 300,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "ototo_max"
+    },
+    {
+      "number": 70,
+      "group": "ガマトト＆オトート",
+      "name": "オトート詳細指定",
+      "price_jpy": 150,
+      "billing_unit": "種類・対象",
+      "parameter_default": "MAX",
+      "status": "pending",
+      "kind": "needs_target",
+      "requires": "城・主砲・土台・装飾の対象と値が必要です。"
+    },
+    {
+      "number": 71,
+      "group": "ガマトト＆オトート",
+      "name": "にゃんこ神社Lv.Max",
+      "price_jpy": 300,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "cat_shrine_max"
+    },
+    {
+      "number": 72,
+      "group": "仕様",
+      "name": "ゴールド会員化",
+      "price_jpy": 660,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "gold_membership"
+    },
+    {
+      "number": 73,
+      "group": "仕様",
+      "name": "編成スロット最大化",
+      "price_jpy": 300,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "slots_max"
+    },
+    {
+      "number": 74,
+      "group": "仕様",
+      "name": "にゃんこメダル全開放",
+      "price_jpy": 750,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "medals_all",
+      "aliases": [
+        "にゃんこメダル全解放"
+      ]
+    },
+    {
+      "number": 75,
+      "group": "仕様",
+      "name": "チュートリアルスキップ（初期垢）",
+      "price_jpy": 100,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "skip_tutorial"
+    },
+    {
+      "number": 76,
+      "group": "仕様",
+      "name": "全ミッションクリア",
+      "price_jpy": 750,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "all_missions_clear"
+    },
+    {
+      "number": 77,
+      "group": "仕様",
+      "name": "ユーザーランク報酬全受取",
+      "price_jpy": 200,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "user_rank_rewards_claimed",
+      "exclusive_group": "user_rank_rewards"
+    },
+    {
+      "number": 78,
+      "group": "仕様",
+      "name": "ユーザーランク報酬全未受取化",
+      "price_jpy": 300,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "user_rank_rewards_unclaimed",
+      "exclusive_group": "user_rank_rewards"
+    },
+    {
+      "number": 79,
+      "group": "仕様",
+      "name": "猫図鑑報酬全受取",
+      "price_jpy": 300,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "catguide_rewards_claimed",
+      "exclusive_group": "catguide_rewards"
+    },
+    {
+      "number": 80,
+      "group": "仕様",
+      "name": "猫図鑑報酬全未受取化",
+      "price_jpy": 300,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "catguide_rewards_unclaimed",
+      "exclusive_group": "catguide_rewards",
+      "aliases": [
+        "猫図鑑報酬未全受取化"
+      ]
+    },
+    {
+      "number": 81,
+      "group": "仕様",
+      "name": "スクラッチ未実施化",
+      "price_jpy": 300,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "cat_scratcher_reset"
+    },
+    {
+      "number": 82,
+      "group": "仕様",
+      "name": "グランドアビス（地底迷宮勲章）",
+      "price_jpy": 300,
+      "billing_unit": "種類",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "labyrinth_medals",
+      "max_quantity": 32767,
+      "aliases": [
+        "地底迷宮勲章",
+        "グランドアビス"
+      ],
+      "default_quantity": 999
+    },
+    {
+      "number": 83,
+      "group": "仕様",
+      "name": "敵キャラ図鑑全開放",
+      "price_jpy": 500,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "action",
+      "segment": "s4",
+      "action": "unlock_enemy_guide",
+      "aliases": [
+        "敵キャラ図鑑全解放"
+      ]
+    },
+    {
+      "number": 84,
+      "group": "仕様",
+      "name": "プレイ時間変更",
+      "price_jpy": 500,
+      "billing_unit": "件",
+      "parameter_default": "MAX",
+      "status": "ready",
+      "kind": "playtime",
+      "max_hours": 9999
+    }
+  ],
+  "max_defaults": {
+    "character": {
+      "base_level": 60,
+      "plus_level": 90
+    },
+    "items": {
+      "catfood": 58999,
+      "xp": 99999999,
+      "np": 9999,
+      "normal_tickets": 999,
+      "rare_tickets": 999,
+      "platinum_tickets": 99,
+      "legend_tickets": 99,
+      "leadership": 999,
+      "battle_items": 999,
+      "catseyes": 999,
+      "catamins": 999,
+      "base_materials": 999,
+      "matatabi": 998,
+      "talent_orbs": 998,
+      "stones": 999,
+      "event_tickets": 999,
+      "labyrinth_medals": 999
+    }
+  },
+  "customer_confirmation_required": true,
+  "interpretation_policy": {
+    "method": "定型ルール・項目名の類似度によるローカル推測",
+    "show_inferred_expression": true,
+    "unresolved_blocks_execution": true,
+    "changes_require_new_confirmation": true,
+    "numeric_character_level_without_plus": "基本レベルだけ変更し、既存の＋値を維持"
+  }
+}
