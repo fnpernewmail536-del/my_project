@@ -13,7 +13,7 @@ ITEMS={'ネコボン':'ネコボン','スニャイパー':'スニャイパー','
 AMBIGUOUS={'現在開催中':'開催中のコラボ名・対象キャラを指定してください。','黒い敵に強い':'対黒のどの特性を対象にするかとキャラ一覧が必要です。','浮いている敵に超ダメージ':'属性・特性の照合定義が未接続です。対象キャラを指定してください。','第4形態':'第4形態の解放条件の照合は未対応です。','多め':'具体的な数量または範囲が必要です。','そこそこ':'具体的な数量または範囲が必要です。','ほぼカンスト':'具体的な数量またはMAXを指定してください。','ほぼ全解放':'解放しないキャラを指定してください。','いらないキャラ':'解放しないキャラを指定してください。','限定キャラ':'どの限定キャラを保持するか指定してください。','強すぎる':'対象キャラと変更値を指定してください。','半分くらい':'終了する章・ステージを指定してください。','だいたい':'終了する章・ステージを指定してください。','少し進め':'終了する章・ステージを指定してください。','使えるやつ':'対象キャラ・本能名を指定してください。','使わない本能':'除外する本能名を指定してください。','必要なもの':'対象施設を指定してください。','強い隊員':'隊員のクラス・人数を指定してください。','5万くらい':'許容する範囲を指定してください。','300くらい':'許容する範囲または固定値を指定してください。','500くらい':'許容する範囲または固定値を指定してください。','現在使用中':'編成は自動で保持します。','ネコパーフェクト:本能玉':'キャラに装着している本能玉の個別編集は未対応です。'}
 
 def wants_conditional(text,previous=None):
-    return bool((previous or {}).get('conditional_mode') or re.search(r'現在値|現在レベル|現在[+＋]値|現在の所持数|現在の2倍|現在のデータ|移動速度|未解放の伝説|既に持って|すでに持って|今持って|未所持|値を減らす|今より|下げない|奇数|偶数|1\.5倍|星[1234]|星[１-４]|第[34３４]形態|強いデータ|使わない本能|るろ(?:うに剣心|剣)(?=[^\n]*(?:キャラ|全解放))|隊員.*残|クリア済み.*お宝|普通のお宝|解放状態.*維持|種類について|本能玉.*減らさない|追加[234567]|【追加】',text))
+    return bool((previous or {}).get('conditional_mode') or re.search(r'(?:レベル|[+＋]値)が\d+(?:未満|以上|以下)',text) or re.search(r'現在値|現在レベル|現在[+＋]値|現在の所持数|現在の2倍|現在のデータ|移動速度|未解放の伝説|既に持って|すでに持って|今持って|未所持|値を減らす|今より|下げない|奇数|偶数|1\.5倍|星[1234]|星[１-４]|第[34３４]形態|強いデータ|使わない本能|るろ(?:うに剣心|剣)(?=[^\n]*(?:キャラ|全解放))|隊員.*残|クリア済み.*お宝|普通のお宝|解放状態.*維持|種類について|本能玉.*減らさない|追加[234567]|【追加】',text))
 
 def clean(text):
     text=unicodedata.normalize('NFKC',text).replace('＋','+')
@@ -137,6 +137,22 @@ class Reader:
             if re.search(r'追加|最初|通貨|チケット|キャラ|ステージ|全体',self.section):self.context=None;self.last_selector={}
             return True
         from .advanced_requests import read as read_advanced
+        # Explicit subject, threshold and action are all required. Scope is never
+        # inferred from a nearby rarity or from the first number in a sentence.
+        rarities=r'(基本|EX|超激レア|激レア|伝説レア|レア)'
+        field_pat=r'(基本レベル|レベル|\+値)'
+        before=re.fullmatch(r'(?:現在(?:の)?)?'+field_pat+r'(?:が)?(\d+)(未満|以上|以下)の?'+rarities+r'(?:キャラ)?(?:だけ|は|を)(.+)',s)
+        after=re.fullmatch(rarities+r'(?:キャラ)?の(?:現在の)?'+field_pat+r'が(\d+)(未満|以上|以下)(?:なら|の場合は|のキャラだけ)(.+)',s)
+        if before and re.search(r'[、,。]|\d+(?:未満|以上|以下)',before[5]):before=None
+        if after and re.search(r'[、,。]|\d+(?:未満|以上|以下)',after[5]):after=None
+        if before or after:
+            if before:field,threshold,op,rarity,tail=before.groups()
+            else:rarity,field,threshold,op,tail=after.groups()
+            action_field='plus' if re.search(r'\+値|^\+',tail) else 'base' if re.search(r'レベル|Lv',tail,re.I) else ('plus' if field=='+値' else 'base')
+            expr=expression(tail)
+            if expr is None:raise ParseError('条件の後に変更値または保持を指定してください。')
+            self.cat(rarity,field=action_field,expr=expr,when=[{'field':'plus' if field=='+値' else 'base','op':{'未満':'lt','以上':'ge','以下':'le'}[op],'value':int(threshold)}])
+            return True
         if read_advanced(self,s):return True
         if re.search(r'通常の超激レアについては以下|通常超激レアについては以下',s):
             self.context=('cat',{'rarity':4,'collab':False});self.last_selector=self.context[1];self.current_field='base';return True

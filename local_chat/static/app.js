@@ -1,9 +1,11 @@
 'use strict';
 const $ = id => document.getElementById(id);
 let csrf = '', sending = false, lastRequest = null, lastConfirmation = null, confirmationId = '', canConfirm = false, activeJobs = new Map(), engineErrorShown = false;
+let settingsDirty=false,credentialsDirty=false;
 const labels = {pending:'待機中',running:'処理中',done:'完了',error:'エラー',interrupted:'中断'};
 function el(tag, cls, text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 function message(text, kind='bot'){
+  if(kind==='user')text=text.replace(/((?:引き継ぎコード|引継ぎコード|認証番号)\s*[:：=]?\s*)[a-z0-9]+/gi,'$1••••');
   const row=el('div','message '+kind), bubble=el('div','bubble');
   if(kind!=='user')row.append(el('span','bot-avatar','✧'));
   bubble.append(el('div','',text));bubble.append(el('div','time',new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})));
@@ -22,7 +24,13 @@ function resultBlock(job){
   const block=el('div','codeblock');
   block.append(el('div','result-title',job.status==='done'?'代行が完了しました。':(job.error||job.log||labels[job.status]||'確認中')));
   const codes=el('div','result-codes');
-  if(job.status==='done'&&job.transfer_code&&job.auth_code){codes.append(codeRow('引き継ぎコード',job.transfer_code),codeRow('認証番号',job.auth_code));}
+  if(job.accounts?.length){
+    if(job.status!=='done')block.append(el('div','','作成済みのアカウントです。重複実行せず、結果を確認してください。'));
+    for(const [index,account] of job.accounts.entries()){
+      codes.append(el('strong','','アカウント '+(index+1)),codeRow('引き継ぎコード',account.tc),codeRow('認証番号',account.ac));
+    }
+  }
+  else if(job.status==='done'&&job.transfer_code&&job.auth_code){codes.append(codeRow('引き継ぎコード',job.transfer_code),codeRow('認証番号',job.auth_code));}
   else if(job.recovery_transfer_code&&job.recovery_auth_code){block.append(el('div','','作業前の復旧用コード'));codes.append(codeRow('復旧用コード',job.recovery_transfer_code),codeRow('認証番号',job.recovery_auth_code));}
   block.append(codes);
   if(job.applied?.length)block.append(el('div','history-labels',job.applied.join(' / ')));
@@ -44,6 +52,12 @@ function reviewBlock(data){
   return block;
 }
 function showPlan(data){
+  if(data.settings?.mode)showSettings(data.settings);
+  showCredentialStatus(data.credentials);
+  const interpretation=data.interpretation;
+  $('understanding').textContent=interpretation?
+    '読み取り '+interpretation.review_items+'項目 ／ 要確認 '+interpretation.needs_review+'件 ／ 表現の整理 '+interpretation.rewrites+'件':
+    '変更内容と対象を確認してください。';
   $('plan').replaceChildren();
   for(const item of data.labels||[])$('plan').append(el('div','plan-item',item.label));
   if(data.quoted_prices?.length)$('plan').append(quotedPricesBlock(data.quoted_prices));
@@ -56,14 +70,39 @@ function showPlan(data){
     const row=el('div','plan-item blocker');row.append(el('div','','未解釈項目'+(index+1)+'：'+item.input));
     const edit=el('button','copy','訂正する');edit.type='button';edit.onclick=()=>{$('input').value='未解釈項目'+(index+1)+'=';$('input').focus();};
     const omit=el('button','copy','この項目は不要');omit.type='button';omit.onclick=()=>sendText('未解釈項目'+(index+1)+'不要');row.append(edit,omit);$('plan').append(row);
+    for(const candidate of item.suggestions||[]){
+      const suggest=el('button','copy','候補：'+candidate);suggest.type='button';
+      suggest.onclick=()=>sendText('未解釈項目'+(index+1)+'='+candidate);row.append(suggest);
+    }
   }
   if(!data.labels?.length)$('plan').textContent='依頼内容がここに表示されます。';
   const missing=data.missing||[];
   $('stepContent').classList.toggle('done',!!data.labels?.length);
   $('stepCodes').classList.toggle('done',!!data.labels?.length&&!missing.includes('引き継ぎコード')&&!missing.includes('認証番号'));
   $('stepRun').classList.toggle('done',data.kind==='started');
-  $('runDraft').hidden=!(data.ready&&data.kind!=='started');
-  confirmationId=data.confirmation_id||'';canConfirm=!!data.ready&&data.kind!=='started'&&!!confirmationId;
+  $('runDraft').hidden=!(data.ready&&data.kind!=='started'&&!credentialsDirty&&!settingsDirty);
+  confirmationId=data.confirmation_id||'';canConfirm=!!data.ready&&data.kind!=='started'&&!!confirmationId&&!credentialsDirty&&!settingsDirty;
+}
+function showSettings(settings){
+  $('requestMode').value=settings.mode||'daiko';
+  $('accountType').value=settings.account_type||'new';
+  $('createCount').value=String(settings.count||1);
+  $('creationFields').hidden=settings.mode!=='create';
+  $('credentialsCard').hidden=settings.mode==='create';
+  settingsDirty=false;
+  $('settingsStatus').textContent=settings.mode==='create'?'新規作成では引き継ぎ情報は不要です。種別・個数と追加の変更内容を確認してください。':'既存アカウントの変更を受け付けます。';
+}
+function showCredentialStatus(credentials){
+  if(!credentials)return;
+  $('credentialsStatus').textContent='引き継ぎコード：'+(credentials.transfer_code?'登録済み':'未登録')+' ／ 認証番号：'+(credentials.auth_code?'登録済み':'未登録');
+}
+function busy(value){
+  sending=value;
+  for(const id of ['send','runDraft','applySettings','saveCredentials','requestMode','accountType','createCount','newRequest'])$(id).disabled=value;
+}
+function requireSettings(){
+  if(!settingsDirty)return true;
+  toast('先に「モード・作成設定を反映」を押してください。');return false;
 }
 function updateEngine(engine){
   $('engineStatus').replaceChildren(el('i'),document.createTextNode(engine.ready?'代行エンジン接続済み':engine.loading?'エンジン読み込み中':'エンジン未接続'));
@@ -71,7 +110,7 @@ function updateEngine(engine){
   if(engine.error&&!engineErrorShown){message('代行エンジンを読み込めませんでした。\n'+engine.error+'\nファイルの配置と、元プロジェクトの依存パッケージを確認してください。','error');engineErrorShown=true;}
 }
 async function sendText(text){
-  if(sending)return;sending=true;$('send').disabled=true;$('runDraft').disabled=true;
+  if(sending||!requireSettings())return;busy(true);
   // A retry of the same request retains its ID, so response loss cannot execute twice.
   // The server recognizes approval replies and binds them to this displayed review.
   const payload=lastRequest&&lastRequest.message===text?lastRequest:{message:text,confirmation_id:confirmationId||null,request_id:crypto.randomUUID()};
@@ -81,11 +120,12 @@ async function sendText(text){
     if(data.kind==='draft'&&data.labels?.length)bubble.append(reviewBlock(data));
     if(data.kind==='started'){activeJobs.set(data.job_id,{bubble,status:''});pollJobs();}
   }catch(err){message(err.isServer?err.message:'通信を確認できません。同じ内容で送信し直すと、同じ送信IDで受付状況を確認します。','error');if(err.isServer){lastRequest=null;try{await refreshDraft();}catch{}}}
-  finally{sending=false;$('send').disabled=false;$('runDraft').disabled=false;}
+  finally{busy(false);}
 }
 async function confirmDraft(acknowledgement='確認して実行'){
-  if(sending||(!canConfirm&&!lastConfirmation))return;
-  sending=true;$('send').disabled=true;$('runDraft').disabled=true;
+  if(credentialsDirty){toast('変更した引き継ぎ情報を先に登録してください。');return;}
+  if(sending||!requireSettings()||(!canConfirm&&!lastConfirmation))return;
+  busy(true);
   const payload=lastConfirmation||{confirmation_id:confirmationId,request_id:crypto.randomUUID()};lastConfirmation=payload;
   message(acknowledgement,'user');
   try{
@@ -96,10 +136,10 @@ async function confirmDraft(acknowledgement='確認して実行'){
   }catch(err){
     message(err.isServer?err.message:'実行確認の応答を受け取れません。同じ確認ボタンで受付状況を確認できます。','error');
     if(err.isServer){lastConfirmation=null;try{await refreshDraft();}catch{}}
-  }finally{sending=false;$('send').disabled=false;$('runDraft').disabled=false;}
+  }finally{busy(false);}
 }
 async function refreshDraft(){
-  const data=await api('/api/bootstrap');showPlan(data.draft||{});
+  const data=await api('/api/bootstrap');if(data.settings)showSettings(data.settings);showPlan(data.draft||{});
   if(data.draft?.labels?.length)message(data.draft.message).append(reviewBlock(data.draft));
 }
 let polling=false;
@@ -117,7 +157,7 @@ async function pollJobs(){
 async function history(){
   try{const data=await api('/api/jobs');$('historyList').replaceChildren();
     if(!data.jobs.length)$('historyList').append(el('div','context-card','まだ実行履歴がありません。'));
-    for(const job of data.jobs){const card=el('article','history-card'),head=el('div','history-head');head.append(el('span','',new Date(job.created_at*1000).toLocaleString('ja-JP')),el('span','badge '+job.status,labels[job.status]||job.status));card.append(head,el('div','history-labels',job.labels.map(x=>x.label).join(' / ')),resultBlock(job));$('historyList').append(card);}
+    for(const job of data.jobs){const card=el('article','history-card'),head=el('div','history-head');head.append(el('span','',job.created_at?new Date(job.created_at*1000).toLocaleString('ja-JP'):'受付済み'),el('span','badge '+job.status,labels[job.status]||job.status));card.append(head,el('div','history-labels',(job.labels||[]).map(x=>x.label).join(' / ')),resultBlock(job));$('historyList').append(card);}
   }catch(err){toast(err.message);}
 }
 document.querySelectorAll('[data-view]').forEach(button=>button.onclick=()=>{
@@ -128,10 +168,39 @@ document.querySelectorAll('[data-example]').forEach(button=>button.onclick=()=>{
 $('composer').onsubmit=event=>{event.preventDefault();const text=$('input').value.trim();if(text)sendText(text);};
 $('input').onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();$('composer').requestSubmit();}};
 $('runDraft').onclick=()=>confirmDraft();
-$('newRequest').onclick=async()=>{try{await api('/api/reset',{});lastRequest=null;lastConfirmation=null;$('input').value='';showPlan({});message('新しい依頼を始めます。代行内容を送ってください。');}catch(err){toast(err.message);}};
+$('newRequest').onclick=async()=>{if(sending)return;busy(true);try{await api('/api/reset',{});lastRequest=null;lastConfirmation=null;$('input').value='';$('transferCode').value='';$('authCode').value='';credentialsDirty=false;showCredentialStatus({});showPlan({});message('新しい依頼を始めます。代行内容を送ってください。');}catch(err){toast(err.message);}finally{busy(false);}};
 $('refreshHistory').onclick=history;
-message('こんにちは。代行内容を送ってください。くだけた表現や軽い誤字も、対応項目から推測します。\n\n推測した表現と数量を表示するので、内容を確認してから「確認して実行」を押してください。\n\n数量の省略はMAX、数字指定と「不要」を優先します。コードはあとから送れます。');
-(async()=>{try{const data=await api('/api/bootstrap');csrf=data.csrf;updateEngine(data.engine);if(data.draft)showPlan(data.draft);for(const job of data.jobs){if(['pending','running','interrupted'].includes(job.status)){const bubble=message('前回の依頼を確認しています。');activeJobs.set(job.job_id,{bubble,status:''});}}pollJobs();await loadMenu();}catch(err){message('接続できませんでした。ログイン状態を確認してページを再読み込みしてください。','error');}})();
+for(const id of ['requestMode','accountType','createCount'])$(id).onchange=()=>{
+  settingsDirty=true;canConfirm=false;$('runDraft').hidden=true;
+  const creating=$('requestMode').value==='create';
+  $('creationFields').hidden=!creating;$('credentialsCard').hidden=creating;
+  $('settingsStatus').textContent='設定を変更しました。「モード・作成設定を反映」を押してください。';
+};
+$('settingsForm').onsubmit=async event=>{
+  event.preventDefault();if(sending)return;busy(true);
+  try{
+    const data=await api('/api/settings',{mode:$('requestMode').value,account_type:$('accountType').value,count:Number($('createCount').value)});
+    lastRequest=null;lastConfirmation=null;
+    credentialsDirty=false;
+    $('transferCode').value='';$('authCode').value='';
+    showPlan(data);message(data.message).append(reviewBlock(data));
+  }catch(err){toast(err.message);}finally{busy(false);}
+};
+$('credentialsForm').onsubmit=async event=>{
+  event.preventDefault();if(sending||!requireSettings())return;busy(true);
+  try{
+    const data=await api('/api/credentials',{transfer_code:$('transferCode').value.normalize('NFKC').trim(),auth_code:$('authCode').value.normalize('NFKC').trim()});
+    lastRequest=null;lastConfirmation=null;
+    credentialsDirty=false;
+    $('transferCode').value='';$('authCode').value='';$('showCodes').checked=false;
+    $('transferCode').type='password';$('authCode').type='password';
+    showPlan(data);message('引き継ぎ情報を登録しました。コードは履歴に表示しません。');
+  }catch(err){toast(err.message);}finally{busy(false);}
+};
+$('showCodes').onchange=()=>{const type=$('showCodes').checked?'text':'password';$('transferCode').type=type;$('authCode').type=type;};
+for(const id of ['transferCode','authCode'])$(id).oninput=()=>{credentialsDirty=true;canConfirm=false;$('runDraft').hidden=true;$('credentialsStatus').textContent='入力を変更しました。引き継ぎ情報を登録してください。';};
+message('こんにちは。代行内容を送ってください。引き継ぎ情報は専用欄から登録できます。\n\n新規アカウントは上の利用モードを変更して作成できます。推測した表現・数量・対象を確認してから「確認して実行」を押してください。');
+(async()=>{try{const data=await api('/api/bootstrap');csrf=data.csrf;showSettings(data.settings||{});updateEngine(data.engine);if(data.draft)showPlan(data.draft);for(const job of data.jobs){if(['pending','running','interrupted'].includes(job.status)){const bubble=message('前回の依頼を確認しています。');activeJobs.set(job.job_id,{bubble,status:''});}}pollJobs();await loadMenu();}catch(err){message('接続できませんでした。ログイン状態を確認してページを再読み込みしてください。','error');}})();
 setInterval(pollJobs,1800);
 setInterval(async()=>{try{updateEngine((await api('/api/status')).engine);}catch{}},5000);
 async function loadMenu(){

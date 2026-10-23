@@ -6371,6 +6371,7 @@ def run_job_create(job_id, selected, char_list, custom_amounts, count=1, custom_
             codes = handler.get_codes()
             if codes:
                 accounts.append({"tc": codes[0], "ac": codes[1]})
+                update({"accounts": list(accounts)})
             else:
                 update({"status": "error", "error": f"エラー: 保存失敗 ({i+1}個目)。"})
                 return
@@ -7019,11 +7020,14 @@ def api_run_create():
         return jsonify({"error": "処理を開始できませんでした"}), 503
     register_job_to_session(job_id)
     try:
+        chat_execution = request.environ.get("catproxy.chat_execution")
+        chat_kwargs = {"chat_execution": chat_execution} if chat_execution else {}
         executor.submit(
-            run_job_create,
+            run_render_chat_create if chat_execution else run_job_create,
             job_id, selected_payload,
             data.get("char_list", []), custom_amounts, count, custom_playtime, account_type_key, main_story_chapters, vip_items, legend_stages, vip_facilities, vip_talent_orbs, special_stages, character_settings, main_story_stages, event_stage_settings, lineup_settings, ototo_settings, dojo_score_settings, future_score_settings,
             "VIP" if is_vip_confirmed else "free",
+            **chat_kwargs,
         )
     except Exception as exc:
         error_text = _safe_error_message(exc)
