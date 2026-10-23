@@ -107,7 +107,7 @@ def infer_clause(text):
     return None
 
 
-def interpret_request(text, previous=None, character_metadata=None):
+def _interpret_request_existing(text, previous=None, character_metadata=None):
     if not isinstance(text,str) or not text.strip() or len(text)>16000:
         raise ParseError('依頼を1〜16000文字で入力してください。')
     from .conditional_language import wants_conditional, interpret_conditional
@@ -225,4 +225,19 @@ def interpret_request(text, previous=None, character_metadata=None):
     plan['ready']=not plan.get('missing') and not plan['blockers']
     plan['_review_required']=True
     plan.pop('_review_confirmed',None)
+    return plan
+
+
+def interpret_request(text, previous=None, character_metadata=None):
+    if not isinstance(text, str):
+        raise ParseError('依頼を1〜16000文字で入力してください。')
+    from .japanese import rewrite, suggestions
+    rewritten, changes = rewrite(text)
+    plan = _interpret_request_existing(rewritten, previous, character_metadata)
+    known = {(x.get('input'), x.get('suggested')) for x in plan.get('inferences', [])}
+    for change in changes:
+        if (change['input'], change['suggested']) not in known:
+            plan.setdefault('inferences', []).append(change)
+    for issue in plan.get('unresolved', []):
+        issue['suggestions'] = suggestions(issue.get('input', ''))
     return plan
