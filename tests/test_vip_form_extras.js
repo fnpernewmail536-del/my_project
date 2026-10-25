@@ -23,7 +23,7 @@ const requests = [], errors = [];
 class Resources extends ResourceLoader {
   fetch(url){
     const name=new URL(url).pathname;
-    if(name==='/static/js/vip-app.js'||name==='/static/js/vip-form-extras.js')return Promise.resolve(fs.readFileSync(path.join(root,name.slice(1))));
+    if(['/static/js/vip-app.js','/static/js/vip-form-extras.js','/static/js/legend-crowns.js','/static/js/stage-progress.js','/static/js/code-copy.js'].includes(name))return Promise.resolve(fs.readFileSync(path.join(root,name.slice(1))));
     if(name.startsWith('/static/css/') && fs.existsSync(path.join(root,name.slice(1))))return Promise.resolve(fs.readFileSync(path.join(root,name.slice(1))));
     return Promise.resolve(Buffer.from(''));
   }

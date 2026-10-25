@@ -9,7 +9,7 @@ from .level_exclusions import reviewed_level_exclusions
 
 
 def has_details(plan):
-    return bool(plan.get('quantity_ranges') or plan.get('level_rules') or plan.get('plus_only_rules') or plan.get('talents_max') or
+    return bool(plan.get('_pending_document_ownership') or plan.get('document_rules') or plan.get('quantity_ranges') or plan.get('level_rules') or plan.get('plus_only_rules') or plan.get('talents_max') or
                 plan.get('helpers_legend') or plan.get('orb_s_amount') is not None or
                 plan.get('unlock_rarities') or plan.get('unlock_queries') or plan.get('level_exclusion_queries') or plan.get('fruit_filters') or
                 plan.get('labyrinth_amount') is not None or plan.get('gamatoto_level') is not None)
@@ -17,10 +17,17 @@ def has_details(plan):
 
 def compile_details(module, plan):
     """Resolve metadata and roll ranges without consuming an account's codes."""
+    if plan.get('_pending_document_ownership'):
+        raise ParseError('解放割合の除外対象が未確定です。条件を修正した注文書を送り直して、対象数を確認してください。')
     if not has_details(plan): return {}
     if not hasattr(module, '_apply_all_segments_unlocked'):
         raise ParseError('このエンジンは詳細指定に対応していません。my_project(4).zipのmain13.pyを使用してください。')
+    if plan.get('document_rules') and (plan.get('level_rules') or plan.get('plus_only_rules') or plan.get('level_exclusion_queries')):
+        raise ParseError('グループ別レベルと別形式のレベル指定が重複しています。新しい依頼で、同じ形式にまとめて確認してください。')
     result = {'levels': [], 'talents': [], 'orbs': {}, 'helper_ids': [], 'unlock_ids': [], 'fruits': {}}
+    if plan.get('document_rules'):
+        from .conditional_engine import compile_conditional
+        result['document_conditional']=compile_conditional(module,{'conditional_rules':plan['document_rules']})
     metadata = module.get_character_metadata() if plan.get('level_rules') or plan.get('plus_only_rules') or plan.get('talents_max') or plan.get('unlock_rarities') or plan.get('unlock_queries') or plan.get('level_exclusion_queries') else {}
     characters = [c for c in metadata.get('characters', []) if c.get('selectable', True)]
     result['level_exclusions']=reviewed_level_exclusions(metadata,plan) if plan.get('level_exclusion_queries') else []
@@ -72,7 +79,9 @@ def compile_details(module, plan):
     if plan.get('level_rules') or plan.get('plus_only_rules'):
         if not characters: raise ParseError('キャラ定義が空です。引き継ぎ取得前に停止しました。')
         needs_plus_support = any(rule.get('plus_only_supported') for rule in plan['level_rules'].values())
-        unit_rows = list(module.core.CSV(data('DataLocal', 'unitbuy.csv'))) if needs_plus_support else None
+        from .character_caps import get_level_caps
+        support_ids=[int(info['id']) for info in characters if plan['level_rules'].get(str(info['rarity']),{}).get('plus_only_supported')]
+        unit_caps=get_level_caps(module,metadata,support_ids) if needs_plus_support else {}
         exception_characters = [info for info in characters
                                 if plan.get('plus_only_rules',{}).get('collab') or plan.get('plus_only_rules',{}).get('collab:'+str(info['rarity'])) or plan['level_rules'].get(str(info['rarity']), {}).get('collab_plus')]
         collab_ids = collaboration_ids(metadata, exception_characters)
@@ -92,12 +101,7 @@ def compile_details(module, plan):
             display_id = int(info['id'])
             plus_supported = True
             if rule.get('plus_only_supported'):
-                if display_id < 1 or display_id > len(unit_rows) or len(unit_rows[display_id - 1]) <= 51:
-                    raise ParseError(f'No.{display_id}の＋対応定義がありません。引き継ぎ取得前に停止しました。')
-                row = unit_rows[display_id - 1]
-                if row[13].to_int() != int(info['rarity']):
-                    raise ParseError(f'No.{display_id}のレア度定義が一致しません。引き継ぎ取得前に停止しました。')
-                plus_supported = row[51].to_int() > 0
+                plus_supported = unit_caps[display_id]['plus'] > 0
             base = None if rule['base'] == 'keep' else MAX_CHARACTER_BASE if rule['base'] == 'max' else roll(rule['base']) if isinstance(rule['base'],list) else int(rule['base'])
             plus_rule = rule['plus']
             # Ordinary gacha fillers in collaboration banners keep the default rule.
@@ -149,6 +153,9 @@ def compile_details(module, plan):
 def apply_details(module, save, compiled):
     """Any missing target or failed write aborts final upload and uses original recovery."""
     logs = []
+    if compiled.get('document_conditional'):
+        from .conditional_engine import apply_conditional
+        logs.extend(apply_conditional(module,save,compiled['document_conditional']))
     ranges=compiled.get('quantity_ranges',{})
     for n,bounds in ranges.items():
         n=int(n)

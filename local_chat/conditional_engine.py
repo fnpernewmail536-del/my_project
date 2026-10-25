@@ -2,6 +2,7 @@
 No user expressions are executed. Unresolved metadata fails before transfer.
 """
 import copy
+import secrets
 from decimal import Decimal, ROUND_FLOOR
 from .parser import ParseError
 from .named_characters import NameIndex, name_key
@@ -28,6 +29,7 @@ def value(expr,old,cap,no_decrease=False):
     elif op=='range':v=roll(expr['bounds'])
     elif op=='add':v=old+int(expr['value'])
     elif op=='mul':v=int((Decimal(str(old))*Decimal(str(expr['value']))).to_integral_value(rounding=ROUND_FLOOR))
+    elif op=='percent':v=cap*int(expr['value'])//100
     elif op=='atleast':v=max(old,int(expr['value']))
     else:raise ParseError('未知の計算方法です。')
     v=max(0,min(cap,v))
@@ -42,7 +44,7 @@ def predicate(conditions,original,field):
         if not valid:return False
     return True
 
-def select_ids(selector,metadata,index,collabs):
+def select_ids(selector,metadata,index,collabs,allow_empty=False):
     chars={int(c['id']):c for c in metadata.get('characters',[]) if c.get('selectable',True)}
     ids=set(chars)
     if 'names' in selector:
@@ -51,6 +53,10 @@ def select_ids(selector,metadata,index,collabs):
             exact=index.exact(query)
             if len(exact)!=1:raise ParseError('キャラを一意に特定できません：'+query+'。正式名またはNo.番号を指定してください。')
             ids.add(next(iter(exact)))
+    for query in selector.get('exclude_names',[]):
+        exact=index.exact(query)
+        if len(exact)!=1:raise ParseError('除外キャラを一意に特定できません：'+query)
+        ids.difference_update(exact)
     if selector.get('rarity') is not None:ids={i for i in ids if int(chars[i]['rarity'])==selector['rarity']}
     if selector.get('collab') is not None:ids={i for i in ids if (i in collabs)==selector['collab']}
     if selector.get('regular_gacha'):
@@ -67,20 +73,22 @@ def select_ids(selector,metadata,index,collabs):
     if selector.get('series'):
         series=selector['series'];terms={'ちび':['ちび'],'大狂乱':['大狂乱'],'特急':['ネコ特急','ネコ超特急','ネコエクスプレス']}[series]
         ids={i for i in ids if any(any(t in n for t in terms) for n in chars[i].get('names',[]))}
-    if not ids:raise ParseError('対象キャラの定義がありません：'+str(selector))
+    if not ids and not allow_empty:raise ParseError('対象キャラの定義がありません：'+str(selector))
     return sorted(ids)
 
 def priority(selector):
     return 3 if selector.get('names') else 2 if selector.get('group') or selector.get('series') or selector.get('collab') is not None else 1 if selector.get('rarity') is not None else 0
 
 def compile_conditional(module,plan):
+    if plan.get('_pending_document_ownership'):
+        raise ParseError('解放割合の除外対象が未確定です。条件を修正した注文書を送り直して、対象数を確認してください。')
     rules=copy.deepcopy(plan.get('conditional_rules',[]))
     if len(rules)>2000:raise ParseError('条件指定が多すぎます。分割してください。')
     for r in rules:
-        if r.get('expr',{}).get('op') not in ('keep','max','set','range','add','mul','atleast'):raise ParseError('条件式の操作が不正です。')
+        if r.get('expr',{}).get('op') not in ('keep','max','set','range','add','mul','atleast','percent'):raise ParseError('条件式の操作が不正です。')
         if r['expr']['op']=='range' and not 0<=r['expr']['bounds'][0]<=r['expr']['bounds'][1]<=2147483647:raise ParseError('条件式の範囲が不正です。')
     result={'rules':rules,'no_decrease':plan.get('conditional_no_decrease',False),'cat_no_decrease':plan.get('conditional_cat_no_decrease',False)}
-    char_rules=[r for r in rules if r['domain'] in ('cat','talent')]
+    char_rules=[r for r in rules if r['domain'] in ('cat','talent','ownership')]
     if char_rules:
         metadata=module.get_character_metadata();index=NameIndex(metadata)
         need_collab=any(r.get('selector',{}).get('collab') is not None or r.get('selector',{}).get('group') for r in char_rules)
@@ -88,24 +96,43 @@ def compile_conditional(module,plan):
         result['characters']={int(c['id']):c for c in metadata['characters'] if c.get('selectable',True)}
         levels=any(r['domain']=='cat' and r['field'] in ('base','plus') for r in rules)
         if levels:
-            raw=module._latest_jp_game_data_getter().download('DataLocal','unitbuy.csv')
-            if raw is None:raise ParseError('キャラ上限定義を取得できません。引き継ぎ取得前に停止しました。')
-            rows=list(module.core.CSV(raw));result['caps']={}
             target_ids = set()
             for rule in char_rules:
                 if rule['domain'] == 'cat' and rule['field'] in ('base', 'plus'):
                     target_ids.update(select_ids(rule.get('selector', {}), metadata, index, collabs))
-            for cid in sorted(target_ids):
-                info = result['characters'][cid]
-                if cid>len(rows) or len(rows[cid-1])<=51 or rows[cid-1][13].to_int()!=int(info['rarity']):raise ParseError('キャラ上限定義が一致しません：No.'+str(cid))
-                result['caps'][cid]={'base':max(1,rows[cid-1][50].to_int()),'plus':max(0,rows[cid-1][51].to_int())}
+            from .character_caps import get_level_caps
+            result['caps']=get_level_caps(module,metadata,target_ids)
         for r in char_rules:
-            r['ids']=select_ids(r.get('selector',{}),metadata,index,collabs);r['priority']=priority(r.get('selector',{}))
+            if r.get('exclusion_policy'):
+                from .targeted_requests import ownership_exclusions
+                policy=r['exclusion_policy'];excluded,_,issues=ownership_exclusions(policy,metadata)
+                if issues:raise ParseError(issues[0]['reason'])
+                if excluded!=policy['expected_names']:raise ParseError('コラボの除外対象が変わりました。注文書を送り直して確認してください。')
+            r['ids']=select_ids(r.get('selector',{}),metadata,index,collabs,allow_empty=r['domain']=='ownership' and bool(r.get('selector',{}).get('exclude_names')));r['priority']=priority(r.get('selector',{}))
+            if r['expr']['op']=='percent' and not 0<=int(r['expr']['value'])<=100:
+                raise ParseError('割合は0〜100%で指定してください。')
             expected=r.get('expected_ids')
             if expected is not None and expected!=r['ids']:raise ParseError('対象キャラの定義が変わりました。確認し直してください。')
+            if r['domain']=='cat' and r['field']=='form':
+                if r['expr']!={'op':'set','value':3} or r.get('selector',{}).get('forms_min')!=3:
+                    raise ParseError('形態指定は対応キャラの第3形態への切替だけに対応しています。')
+                if not callable(getattr(module,'character_third_form_state',None)):
+                    raise ParseError('第3形態の実行接続がありません。修正版のmain13.pyへ更新してください。')
+                from .character_forms import form_specs
+                specs=form_specs(result['characters'],r['ids'])
+                if r.get('expected_form_specs')!=specs:raise ParseError('第3形態・進化権の定義が変わりました。依頼を再送して確認してください。')
             if r['domain']=='talent' and r.get('exclude_speed'):
                 for cid in r['ids']:
                     if any(not t.get('name') for t in result['characters'][cid].get('talents',[])):raise ParseError('移動速度本能の名前定義がありません。')
+        # Narrow ownership exceptions take their own population; broad quotas
+        # apply only to remaining units, without counting any unit twice.
+        from .character_caps import strict_cap_issues
+        cap_issues=strict_cap_issues(char_rules,result['characters'],result.get('caps',{}))
+        if cap_issues:raise ParseError(f'キャラ上限を超える指定が{len(cap_issues)}箇所あります。値は変更していません。\n'+'\n'.join(cap_issues))
+        assigned=set()
+        ownership=[r for r in char_rules if r['domain']=='ownership']
+        for r in sorted(ownership,key=lambda r:(r['priority'],len(r.get('selector',{}))),reverse=True):
+            r['quota_ids']=sorted(set(r['ids'])-assigned);assigned.update(r['ids'])
     if any(r['domain'] in ('legend','event','items','orbs','facilities','action') for r in rules):result['legend_metadata']=module.get_legend_metadata()
     if any(r['domain']=='helpers' for r in rules):
         raw=module._latest_jp_game_data_getter().download('resLocal','GamatotoExpedition_Members_name_ja.csv')
@@ -130,6 +157,8 @@ def compile_conditional(module,plan):
             r['maps']=maps
     from .advanced_engine import compile_extended
     compile_extended(module,result)
+    from .targeted_engine import compile_targets
+    compile_targets(module,result)
     return result
 
 def apply_conditional(module,save,compiled):
@@ -142,7 +171,8 @@ def apply_conditional(module,save,compiled):
         if not predicate(rule.get('when'),context,rule['field']):return
         rank=(rule.get('priority',0),rule['_order'])
         if key in pending and pending[key]['rank']>rank:return
-        new=value(rule['expr'],old,cap,no_decrease or (compiled.get('cat_no_decrease',False) and rule['domain']=='cat') or rule.get('no_decrease',False))
+        preserve_high=False if rule['domain']=='cat' and rule['field']=='form' else no_decrease or (compiled.get('cat_no_decrease',False) and rule['domain']=='cat') or rule.get('no_decrease',False)
+        new=value(rule['expr'],old,cap,preserve_high)
         pending[key]={'old':old,'new':new,'get':getter,'set':setter,'rank':rank,'label':rule.get('label',key)}
     meta=compiled.get('legend_metadata',{})
     for order,r in enumerate(compiled['rules']):
@@ -150,6 +180,18 @@ def apply_conditional(module,save,compiled):
         if domain=='resource':
             attr=SCALARS[field];old=getattr(save,attr)
             put(field,old,lambda a=attr:getattr(save,a),lambda v,a=attr:setattr(save,a,v),r,CAPS[field])
+        elif domain=='ownership':
+            ids=r['quota_ids'];target=len(ids)*int(expr['value'])//100
+            cats={cid:save.cats.get_cat_by_id(cid-1) for cid in ids}
+            if any(c is None for c in cats.values()):raise ParseError('所持率の対象キャラがセーブにありません。')
+            owned=[cid for cid,c in cats.items() if c.unlocked]
+            if len(owned)>target:
+                raise ParseError(f'現在の所持数{len(owned)}体が指定所持率の目標{target}体を超えています。キャラを削除せず停止しました。')
+            missing=[cid for cid,c in cats.items() if not c.unlocked]
+            additions=secrets.SystemRandom().sample(missing,target-len(owned))
+            for cid in additions:
+                cat=cats[cid]
+                put(f'cat:{cid}:unlock',0,lambda c=cat:int(bool(c.unlocked)),lambda v,c=cat:c.unlock(save),{**r,'expr':{'op':'set','value':1}},1,{'unlocked':0})
         elif domain in ('cat','talent'):
             for cid in r['ids']:
                 cat=save.cats.get_cat_by_id(cid-1)
@@ -166,6 +208,7 @@ def apply_conditional(module,save,compiled):
                 if field=='unlocked':
                     def setter(v,c=cat):
                         if v and not c.unlocked:c.unlock(save)
+                        elif not v:c.remove(reset=False)
                     put(f'cat:{cid}:unlock',old['unlocked'],lambda c=cat:int(bool(c.unlocked)),setter,r,1,old)
                 elif field in ('base','plus'):
                     # Existing locked units only receive levels if this order unlocks them.
@@ -174,6 +217,11 @@ def apply_conditional(module,save,compiled):
                     put(f'cat:{cid}:{field}',old[field],getter,setter,r,compiled['caps'][cid][field],old)
                 elif field=='forms':
                     put(f'cat:{cid}:forms',cat.unlocked_forms,lambda c=cat:c.unlocked_forms,lambda v,c=cat:setattr(c,'unlocked_forms',v),r,min(3,int(compiled['characters'][cid].get('form_count',1))))
+                elif field=='form':
+                    fields=module.character_third_form_state(cat,compiled['characters'][cid])
+                    for attr,new in fields.items():
+                        put(f'cat:{cid}:{attr}',getattr(cat,attr),lambda c=cat,a=attr:getattr(c,a),
+                            lambda v,c=cat,a=attr:setattr(c,a,v),{**r,'expr':{'op':'set','value':new},'no_decrease':False},3,old)
         elif domain=='items':
             group=r['group'];names=meta.get('vip_item_groups',{}).get(group) or getattr(module,'VIP_ITEM_LABELS',{}).get(group)
             if group=='battle_items':items=save.battle_items.items
@@ -209,11 +257,11 @@ def apply_conditional(module,save,compiled):
                 stages=chapter.get_valid_treasure_stages()
                 for i,stage in enumerate(stages):
                     context={'treasure':int(stage.treasure),'clear':int(stage.clear_times)}
-                    attr='treasure' if field=='treasure' else 'clear_times'
+                    attr='itf_timed_score' if field=='score' else 'treasure' if field=='treasure' else 'clear_times'
                     if field=='clear':
                         setter=lambda v,c=chapter,j=i:c.clear_stage(j,v)
-                    else:setter=lambda v,s=stage:setattr(s,'treasure',v)
-                    put(f'story:{position}:{i}:{field}',getattr(stage,attr),lambda s=stage,a=attr:getattr(s,a),setter,r,CAPS[field],context)
+                    else:setter=lambda v,s=stage,a=attr:setattr(s,a,v)
+                    put(f'story:{position}:{i}:{field}',getattr(stage,attr),lambda s=stage,a=attr:getattr(s,a),setter,r,9999 if field=='score' else CAPS[field],context)
         elif domain=='legend':
             spec=meta.get(r['series'],{}).get('maps',[])
             if not spec:raise ParseError('レジェンドの章定義がありません。')
@@ -270,7 +318,13 @@ def apply_conditional(module,save,compiled):
         elif domain=='action':
             # Explicit auxiliary actions cannot touch characters or story state.
             checked.append(r)
-        elif domain in ('profile','helper_mix','tower','labyrinth','account'):checked.append(r)
+        elif domain=='aku_ex':
+            for target in r['targets']:
+                cid=target['reward_cat'];cat=save.cats.get_cat_by_id(cid-1)
+                if cat is None:raise ParseError('富士山EXの報酬キャラがセーブにありません。')
+                put(f'cat:{cid}:unlock',int(bool(cat.unlocked)),lambda c=cat:int(bool(c.unlocked)),lambda v,c=cat:c.unlock(save),r,1)
+            checked.append(r)
+        elif domain in ('profile','helper_mix','tower','labyrinth','account','event_all'):checked.append(r)
         else:raise ParseError('実行未対応の条件対象です：'+domain)
     # Filter levels/talents of units left locked after all unlock exceptions.
     for key in list(pending):
@@ -281,11 +335,11 @@ def apply_conditional(module,save,compiled):
             if not final_unlocked:pending.pop(key)
     protected={key:plain(getattr(save,key)) for key in ('lineups','order_ids','cat_order') if hasattr(save,key)}
     favorite_before=copy.deepcopy(save.cats.favourites) if hasattr(save.cats,'favourites') else None
-    unit_protected={cid:{k:copy.deepcopy(getattr(save.cats.get_cat_by_id(cid-1),k)) for k in ('current_form','favourite','favorite') if hasattr(save.cats.get_cat_by_id(cid-1),k)} for cid in compiled.get('characters',{})}
-    for entry in pending.values():
+    unit_protected={cid:{k:copy.deepcopy(getattr(save.cats.get_cat_by_id(cid-1),k)) for k in ('current_form','favourite','favorite') if hasattr(save.cats.get_cat_by_id(cid-1),k) and f'cat:{cid}:{k}' not in pending} for cid in compiled.get('characters',{})}
+    for _,entry in sorted(pending.items(),key=lambda item:0 if item[0].endswith(':unlock') else 1):
         if entry['new']!=entry['old']:entry['set'](entry['new'])
     for r in checked:
-        if r['domain'] in ('profile','helper_mix','tower','labyrinth','account'):continue
+        if r['domain'] in ('profile','helper_mix','tower','labyrinth','account','event_all','aku_ex'):continue
         if r['domain']=='helpers':
             save.gamatoto.helpers.helpers=r['targets'];continue
         if r['field']=='gamatoto_max':
@@ -302,7 +356,14 @@ def apply_conditional(module,save,compiled):
         else:raise ParseError('補助操作が未対応です：'+r['field'])
     from .advanced_engine import apply_extended
     apply_extended(module,save,compiled)
+    from .targeted_engine import apply_targets
+    apply_targets(module,save,compiled)
     mismatches=[e['label'] for e in pending.values() if e['get']()!=e['new']]
+    for r in compiled['rules']:
+        if r['domain']=='ownership':
+            ids=r['quota_ids'];goal=len(ids)*int(r['expr']['value'])//100
+            if sum(bool(save.cats.get_cat_by_id(cid-1).unlocked) for cid in ids)!=goal:
+                mismatches.append('所持率：'+r.get('label','対象キャラ'))
     for key,before in protected.items():
         after=getattr(save,key)
         if plain(after)!=before:mismatches.append('保持指定：'+key)
@@ -314,4 +375,9 @@ def apply_conditional(module,save,compiled):
         for k,v in fields.items():
             if getattr(c,k)!=v:mismatches.append('保持指定：No.'+str(cid)+':'+k)
     if mismatches:raise RuntimeError('最終検証で条件不一致：'+'・'.join(dict.fromkeys(mismatches))+'。アップロードを停止しました。')
-    return [f'条件付き指定：{len(pending)}項目を変更前の値で判定・最終検証済み']
+    from .character_forms import verify_forms
+    verify_forms(module,save,pending)
+    logs=[f'条件付き指定：{len(pending)}項目を変更前の値で判定・最終検証済み']
+    if any(r['domain']=='cat' and r['field']=='form' for r in compiled['rules']):
+        logs.append(f'第3形態へ切替：{sum(k.endswith(":current_form") for k in pending)}体（未所持は保持）')
+    return logs

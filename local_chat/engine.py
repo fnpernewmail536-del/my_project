@@ -91,6 +91,12 @@ class Engine:
             deferred = set()
             if compiled and args and isinstance(args[0],dict):
                 selected = args[0]
+                if any(r['domain']=='event_all' for r in compiled.get('document_conditional',{}).get('rules',[])):
+                    # The reviewed list replaces the native event sweep, which
+                    # increments every allocated slot, including undefined ones.
+                    replacements=['main_story_clear','zombie_clear','aku_clear','legend_clear','true_legend_clear','zero_legend_clear']
+                    selected={group:list(dict.fromkeys(item for key in keys for item in (replacements if key=='all_stage_clear' else [] if key=='event_clear' else [key]))) for group,keys in selected.items()}
+                    args=(selected,)+args[1:]
                 deferred = {'user_rank_rewards_claimed','user_rank_rewards_unclaimed'}.intersection(set().union(*(set(v) for v in selected.values())))
                 if deferred:
                     selected = {group:[key for key in keys if key not in deferred] for group,keys in selected.items()}

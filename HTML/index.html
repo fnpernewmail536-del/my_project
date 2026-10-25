@@ -12,6 +12,8 @@
 {% if theme_layout == 'simple' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-simple.css') }}?v=27">{% endif %}
 {% if theme_layout == 'dark' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/site-dark.css') }}?v=30">{% endif %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/site-preferences.css') }}?v=30">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/legend-crowns.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/stage-progress.css') }}?v=1">
 <script src="{{ url_for('static', filename='site-locale.js') }}?v=34"></script>
 {% include "site_enhancements.html" %}
 </head>
@@ -339,7 +341,10 @@
 <div id="sticky-action-bar" class="sticky-action-bar">
   <button type="button" id="sticky-run-button" class="btn btn-primary" onclick="runCurrentTab()">代行を実行</button>
 </div>
-<script src="{{ url_for('static', filename='js/index-app.js') }}?v=35"></script>
+<script src="{{ url_for('static', filename='js/legend-crowns.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/stage-progress.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='js/code-copy.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='js/index-app.js') }}?v=38"></script>
 <script src="/static/theme-local.js?v=38" defer></script>
 </body>
 </html>

@@ -36,7 +36,7 @@ def normalize(text):
     return unicodedata.normalize("NFKC", text).lower().strip()
 
 def has_edit_actions(p):
-    return bool(p.get('conditional_rules') or any(p.get('selected',{}).values()) or p.get('level_rules') or
+    return bool(p.get('document_rules') or p.get('conditional_rules') or any(p.get('selected',{}).values()) or p.get('level_rules') or
                 any(amount!='keep' for amount in p.get('plus_only_rules',{}).values()) or
                 p.get('orb_s_amount') is not None or
                 any(p.get(key) for key in ['helpers_legend','talents_max','backup_requested','fruit_filters',
@@ -215,7 +215,7 @@ def _parse_request_fixed(text, previous=None):
     section = p['section']
 
     def label(key, value):
-        p['labels'][:] = [x for x in p['labels'] if x['key'].removeprefix('custom_') != key]
+        p['labels'][:] = [x for x in p['labels'] if x['key'].removeprefix('custom_') != key.removeprefix('custom_')]
         p['labels'].append({'key': key, 'label': value})
 
     def remove(key):
@@ -448,6 +448,12 @@ def _parse_request_fixed(text, previous=None):
                         p['menu_numbers'][:] = [n for n in p['menu_numbers'] if n != other['number']]
                         p['spec_numbers'][:] = [n for n in p['spec_numbers'] if n != other['number']]
             action(entry['segment'], entry['action'], title)
+        elif kind == 'aku_ex':
+            if value not in ('', 'max'):raise ParseError('富士山EXは数量指定を受け付けません。')
+            rules=p.setdefault('document_rules',[])
+            if not any(r['domain']=='aku_ex' for r in rules):
+                rules.append({'domain':'aku_ex','field':'clear','expr':{'op':'atleast','value':1},'selector':{},'label':title})
+            label('aku_ex',title+'（報酬キャラの取得を含む・定義確認後に適用）')
         elif kind == 'levels':
             match = re.fullmatch(r'(?:lv\.?|レベル)?(\d+|max)?(?:\+(max|\d+(?:[~〜-]\d+)?|なし))?', value)
             if not match: raise ParseError('レベルは例「メニュー29=40+70」で指定してください。')
@@ -495,9 +501,15 @@ def _parse_request_fixed(text, previous=None):
                 remove('gamatoto_max'); p['gamatoto_level'] = level
                 label('gamatoto_level_detail',title + f'：Lv{level}')
         elif kind == 'playtime':
-            hours = number_amount(value, entry['max_hours'])
-            p['custom_playtime'] = f'{hours}:00'
-            action('s4','custom_playtime',title + f'：{hours}時間')
+            clock=re.fullmatch(r'(\d+):(\d+)(?::(\d+))?',value)
+            if clock:
+                hours,minutes,seconds=int(clock[1]),int(clock[2]),int(clock[3] or 0)
+                if not 0<=hours<=entry['max_hours'] or not 0<=minutes<60 or not 0<=seconds<60:
+                    raise ParseError('プレイ時間の分・秒は0〜59で指定してください。')
+            else:hours,minutes,seconds=number_amount(value,entry['max_hours']),0,0
+            if seconds:raise ParseError('秒までの指定は、構造化依頼の「84.プレイ時間:○時間○分○秒」で入力してください。')
+            p['custom_playtime'] = f'{hours}:{minutes:02d}'
+            action('s4','custom_playtime',title + f'：{hours}時間{minutes}分{seconds}秒')
         elif kind == 'future_scores':
             score = number_amount(value, entry['max_score'])
             p['future_score_settings'] = {str(position): score for position in [3,4,5]}
@@ -519,6 +531,11 @@ def _parse_request_fixed(text, previous=None):
         if not entry: return
         kind=entry['kind']
         if kind=='action': remove(entry['action'])
+        elif kind=='aku_ex':
+            rules=p.get('document_rules',[])
+            keys={'document_'+str(i) for i,r in enumerate(rules) if r['domain']=='aku_ex'}
+            p['document_rules']=[r for r in rules if r['domain']!='aku_ex']
+            p['labels'][:]=[x for x in p['labels'] if x['key']!='aku_ex' and x['key'] not in keys]
         elif kind=='resource': remove(entry['resource_key'])
         elif kind=='backup':
             p['backup_requested']=False

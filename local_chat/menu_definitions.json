@@ -382,7 +382,10 @@
       "kind": "unlock_named",
       "target_required": true,
       "requires": "キャラ名またはNo.番号を照合し、対象確認後に解放します。",
-      "aliases": ["指定キャラ解放", "指定キャラ開放"]
+      "aliases": [
+        "指定キャラ解放",
+        "指定キャラ開放"
+      ]
     },
     {
       "number": 28,
@@ -713,9 +716,9 @@
       "price_jpy": 500,
       "billing_unit": "件",
       "parameter_default": "MAX",
-      "status": "pending",
-      "kind": "needs_target",
-      "requires": "富士山EX専用の対象定義との接続は未実装です。"
+      "status": "ready",
+      "kind": "aku_ex",
+      "notes": "魔界編EXの定義と報酬キャラを確認し、クリア状態・取得状態を同期。"
     },
     {
       "number": 55,

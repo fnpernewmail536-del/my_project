@@ -19,7 +19,7 @@ const draft = token => ({kind:'draft',labels:[{key:'catfood',label:'猫缶：10,
 const started = {kind:'started',job_id:'offline-job',labels:[],message:'開始しました。'};
 const source=fs.readFileSync(path.join(__dirname,'local_chat/static/app.js'),'utf8');
 
-async function app(responder, initial=draft('a'.repeat(64))){
+async function app(responder, initial=draft('a'.repeat(64)), script=source){
   const nodes=new Map(),requests=[];
   const node=id=>{if(!nodes.has(id))nodes.set(id,new Element());return nodes.get(id);};
   const context=vm.createContext({
@@ -36,7 +36,7 @@ async function app(responder, initial=draft('a'.repeat(64))){
       return {ok:!result?.status||result.status<400,json:async()=>payload};
     },
   });
-  vm.runInContext(source,context);
+  vm.runInContext(script,context);
   await new Promise(resolve=>setImmediate(resolve));
   return {requests,context,nodes,send:text=>vm.runInContext('sendText('+JSON.stringify(text)+')',context),
     click:()=>nodes.get('runDraft').onclick(),value:code=>vm.runInContext(code,context)};
@@ -93,6 +93,23 @@ async function run(){
   const review=client.value('reviewBlock('+JSON.stringify(pricedDraft)+')');
   assert.match(textOf(review),/変更数量とは別/);
   assert.match(textOf(review),/猫缶指定：50円/);
-  console.log('5 client flow checks passed (offline; browser layout not tested).');
+  for(const rel of ['local_chat/static/app.js','local_chat/local_static/app.js']){
+    const script=fs.readFileSync(path.join(__dirname,rel),'utf8');
+    const blocked={...draft('e'.repeat(64)),blockers:['除外対象が未確定です。'],
+      unresolved:[{input:'コラボ取得対象の除外',reason:'除外対象が未確定です。',dismissible:false}]};
+    client=await app(()=>null,blocked,script);
+    assert.equal(client.value('canConfirm'),false);
+    assert.equal(client.nodes.get('runDraft').hidden,true);
+    const block=client.value('reviewBlock('+JSON.stringify(blocked)+')');
+    assert.doesNotMatch(textOf(block),/合っていれば「確認して実行」/);
+    const flatten=node=>[node,...(node.children||[]).flatMap(flatten)];
+    const omit=flatten(client.nodes.get('plan')).find(node=>node.textContent==='この項目は不要');
+    assert.equal(omit.disabled,true);
+    const reparsed={...blocked,unresolved:[{input:'コラボ取得対象の除外',dismissible:true,omit_label:'開催年の条件を外して再解析'}]};
+    client.value('showPlan('+JSON.stringify(reparsed)+')');
+    const retry=flatten(client.nodes.get('plan')).find(node=>node.textContent==='開催年の条件を外して再解析');
+    assert.equal(retry.disabled,false);
+  }
+  console.log('7 client flow checks passed (offline; browser layout not tested).');
 }
 run().catch(error=>{console.error(error);process.exitCode=1;});

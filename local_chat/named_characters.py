@@ -29,7 +29,7 @@ def clean_name(text):
     return value
 
 def name_key(text):
-    value=re.sub(r'\s+','',clean_name(text))
+    value=re.sub(r'[\s・･\ufe00-\ufe0f\U000e0100-\U000e01ef]+','',clean_name(text))
     return ''.join(chr(ord(c)-0x60) if '\u30a1'<=c<='\u30f6' else c for c in value)
 
 class NameIndex:
@@ -68,8 +68,19 @@ class NameIndex:
 
     def exact(self,query):
         value=clean_name(query)
+        if len(value)>300:return {}
         literal=self.names.get(name_key(value),{})
         if literal:return literal
+        annotated=re.fullmatch(r'(.+?)\s*\((.+)\)',value)
+        if annotated:
+            inner=self.exact(re.sub(r'のアイコン$','',annotated[2]))
+            outer=self.names.get(name_key(annotated[1]),{})
+            if inner:
+                related=any(name_key(annotated[1]) in name_key(n) for cid in inner for n in self.characters[cid]['names'])
+                return {**outer,**inner} if outer and set(outer)!=set(inner) and not related else inner
+            return {}
+        angel=re.fullmatch(r'(第\d+)使徒',value)
+        if angel:return self.names.get(name_key(angel[1]+'の使徒'),{})
         value=re.sub(POLITE_SUFFIX,'',value).strip()
         numbered=re.fullmatch(ID_PATTERN,value)
         if numbered:

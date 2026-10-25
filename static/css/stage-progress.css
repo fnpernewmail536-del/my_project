@@ -1,0 +1,12 @@
+.stage-progress-settings > summary{cursor:pointer;font-weight:700;line-height:1.6}
+.stage-progress-count{display:inline-block;margin-left:12px;color:var(--accent);font-size:12px}
+.stage-progress-editor{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0}
+.stage-progress-field{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.stage-progress-settings select,.stage-progress-settings input,.stage-progress-settings button,.code-pair-copy button{padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;min-width:0}
+.stage-progress-settings button,.code-pair-copy button{cursor:pointer}
+.stage-progress-settings button:focus-visible,.code-pair-copy button:focus-visible{outline:2px solid var(--accent)}
+.stage-progress-list{max-height:320px;overflow:auto;margin-top:12px}
+.stage-progress-pending{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:8px 0;font-size:12px}
+.code-pair-copy{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px;width:100%;margin-top:8px}
+.code-pair-copy textarea{flex:1;min-width:220px;resize:none;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font:13px/1.7 monospace}
+@media(max-width:480px){.code-pair-copy textarea,.code-pair-copy button{width:100%;min-width:0}.stage-progress-editor{grid-template-columns:1fr}}

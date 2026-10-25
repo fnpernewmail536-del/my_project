@@ -13,6 +13,8 @@ ITEMS={'ネコボン':'ネコボン','スニャイパー':'スニャイパー','
 AMBIGUOUS={'現在開催中':'開催中のコラボ名・対象キャラを指定してください。','黒い敵に強い':'対黒のどの特性を対象にするかとキャラ一覧が必要です。','浮いている敵に超ダメージ':'属性・特性の照合定義が未接続です。対象キャラを指定してください。','第4形態':'第4形態の解放条件の照合は未対応です。','多め':'具体的な数量または範囲が必要です。','そこそこ':'具体的な数量または範囲が必要です。','ほぼカンスト':'具体的な数量またはMAXを指定してください。','ほぼ全解放':'解放しないキャラを指定してください。','いらないキャラ':'解放しないキャラを指定してください。','限定キャラ':'どの限定キャラを保持するか指定してください。','強すぎる':'対象キャラと変更値を指定してください。','半分くらい':'終了する章・ステージを指定してください。','だいたい':'終了する章・ステージを指定してください。','少し進め':'終了する章・ステージを指定してください。','使えるやつ':'対象キャラ・本能名を指定してください。','使わない本能':'除外する本能名を指定してください。','必要なもの':'対象施設を指定してください。','強い隊員':'隊員のクラス・人数を指定してください。','5万くらい':'許容する範囲を指定してください。','300くらい':'許容する範囲または固定値を指定してください。','500くらい':'許容する範囲または固定値を指定してください。','現在使用中':'編成は自動で保持します。','ネコパーフェクト:本能玉':'キャラに装着している本能玉の個別編集は未対応です。'}
 
 def wants_conditional(text,previous=None):
+    from .character_forms import is_third_form_request
+    if is_third_form_request(text):return True
     return bool((previous or {}).get('conditional_mode') or re.search(r'(?:レベル|[+＋]値)が\d+(?:未満|以上|以下)',text) or re.search(r'現在値|現在レベル|現在[+＋]値|現在の所持数|現在の2倍|現在のデータ|移動速度|未解放の伝説|既に持って|すでに持って|今持って|未所持|値を減らす|今より|下げない|奇数|偶数|1\.5倍|星[1234]|星[１-４]|第[34３４]形態|強いデータ|使わない本能|るろ(?:うに剣心|剣)(?=[^\n]*(?:キャラ|全解放))|隊員.*残|クリア済み.*お宝|普通のお宝|解放状態.*維持|種類について|本能玉.*減らさない|追加[234567]|【追加】',text))
 
 def clean(text):
@@ -132,6 +134,19 @@ class Reader:
         self.add('resource',field,expr,priority=3,when=cond,label=s);self.context=('resource',field)
     def read(self,line):
         s=line.strip();s=s.lstrip('、,');s=re.sub(r'^ただ[、,]','',s);s=re.sub(r'^基本キャラの(?=ネコ)', '', s);compact=re.sub(r'\s+','',s)
+        from .character_forms import is_third_form_request
+        if is_third_form_request(s):
+            self.add('cat','form',{'op':'set','value':3},selector={'forms_min':3},label=s)
+            return True
+        if re.search(r'\d+\s*(?:%|割)',s):
+            raise ParseError('割合はレベルの数値へ置き換えません。見出し付きの注文書で解放・本能の対象を指定してください。')
+        if re.match(r'^(?:#{1,4}\s|※|[ABC](?:\+)?(?:グループ|ランク)\s*:)',s,re.I):
+            raise ParseError('見出し・補足文はキャラの育成値として扱いません。注文書の全文を送信してください。')
+        if re.match(r'^\d+[.]',s):
+            from .menu_input import parse_menu_line
+            menu=parse_menu_line(s)
+            if menu and menu['command']!=s:return self.read(menu['command'])
+            raise ParseError('番号付きの指定をメニュー名と照合できません。説明の番号をキャラ番号・レベルへ置き換えません。')
         if s.startswith('【') or s.startswith('《'):
             self.section=s[1:-1];self.exclusion=None
             if re.search(r'追加|最初|通貨|チケット|キャラ|ステージ|全体',self.section):self.context=None;self.last_selector={}
@@ -318,7 +333,7 @@ class Reader:
         if re.search(r'(?:現在|元から|元々).*10(?:個)?(?:以上|を超え).*そのまま|Sランク.*10.*減らさない',s):
             self.add('orbs','amount',{'op':'keep'},rank='S',when=[{'field':'amount','op':'ge','value':10}],label=s);return True
         # Rarity/series character edits and predicates against original levels.
-        if re.search(r'基本|EX|レア|超激|伝説|大狂乱|ちび系|ちびは全員|通常は|コラボは',s,re.I) and re.search(r'レベル|Lv|\+|全員\d|全て\d|:\d|\d+以上|全て\d+',s,re.I):
+        if not re.search(r'チケット|チケ|隊員|クラス|勲章|メダル',s) and re.search(r'基本|EX|レア|超激|伝説|大狂乱|ちび系|ちびは全員|通常は|コラボは',s,re.I) and re.search(r'レベル|Lv|\+|全員\d|全て\d|:\d|\d+以上|全て\d+',s,re.I):
             sel=selector(s);s=re.sub(r'\s+','',s);field='plus' if re.search(r'現在\+値|\+値だけ|\+値は現在|基本レベル.*変更せず',s) else 'base'
             when=conditions(s,field) if re.search(r'現在|すでに|元々|今の|今より',s) else []
             if re.search(r'基本レベル.*一切変更せず',s):self.cat(s,base={'op':'keep'},plus=expression(s.split('+値')[-1]),when=when);return True
@@ -362,7 +377,7 @@ class Reader:
                     self.add('story','treasure',{'op':'set','value':3},chapters=chapters,when=when,label=s)
             self.context=('story',chapters);return True
         if re.search(r'普通のお宝.*普通のまま',s) and self.context and self.context[0]=='story':self.add('story','treasure',{'op':'keep'},chapters=self.context[1],when=[{'field':'treasure','op':'eq','value':2}],label=s);return True
-        if re.search(r'零レジェンド|真レジェンド|真レジェ|レジェンド|レジェ',s) and self.section not in ('チケット','チケット類'):
+        if re.search(r'零レジェンド|真レジェンド|真レジェ|レジェンド|レジェ',s) and self.section not in ('チケット','チケット類') and not re.search(r'隊員|クラス|キャラ|レア|チケット',s) and re.search(r'クリア|ステージ|ストーリー|星|冠|進行|最終|維持|現状|いじらない',s):
             series='zero_legend' if '零レジェンド' in s else 'true_legend' if '真レジェ' in s else 'legend'
             if re.search(r'現状|変更なし|維持|いじらない',s) and not re.search(r'星[1-3].*クリア',s):
                 self.add('legend','clear',{'op':'keep'},series=series,stars=4,label=s);return True
@@ -383,6 +398,9 @@ class Reader:
         if 'ガマトト' in s and re.search(r'レベル.*(?:MAX|上限)|全MAX',s,re.I):self.add('action','gamatoto_max',{'op':'max'},label=s);return True
         if re.search(r'隊員|10人|10体',s):
             if re.search(r'レジェンド|レジェ',s):
+                counts=[int(n) for n in re.findall(r'(\d+)(?:人|体)',s)]
+                if not re.search(r'全員|全部|全て|全枠|10人|10体',s) or any(n!=10 for n in counts):
+                    raise ParseError('隊員の対象と最終人数が必要です。人数未指定や一部指定を全員レジェンド10体へ置き換えません。')
                 self.add('helpers','legend',{'op':'set','value':10},label=s);return True
             if re.search(r'既存|すでに|現在',s):return True
             raise ParseError('隊員のクラスと最終人数を指定してください。')
@@ -426,7 +444,10 @@ def interpret_conditional(text,previous,metadata):
             collabs=collaboration_ids(metadata,metadata['characters']) if need_collab else set()
             for r in p['conditional_rules']:
                 if r['domain'] in ('cat','talent','account'):
-                    try:r['expected_ids']=select_ids(r.get('selector',{}),metadata,index,collabs)
+                    try:
+                        r['expected_ids']=select_ids(r.get('selector',{}),metadata,index,collabs)
+                        from .character_forms import freeze_form_rule
+                        freeze_form_rule(r,metadata)
                     except ParseError as e:unresolved.append({'input':r.get('label','対象キャラ'),'reason':str(e)})
         except ParseError as e:unresolved.append({'input':'キャラ照合','reason':str(e)})
     for rule in p['conditional_rules']:
@@ -440,7 +461,8 @@ def interpret_conditional(text,previous,metadata):
     p['labels']=[{'key':'conditional_'+str(i),'label':display(r)} for i,r in enumerate(p['conditional_rules'])]
     if p.get('conditional_no_decrease'):p['labels'].append({'key':'conditional_keep_high','label':'共通条件：現在値より低くしない'})
     elif p.get('conditional_cat_no_decrease'):p['labels'].append({'key':'conditional_keep_high','label':'共通条件：キャラのレベル・＋値を下げない'})
-    p['labels'].append({'key':'conditional_protection','label':'編成・使用形態・お気に入り・並び順を保持。変更前の値で計算し、適用後に検証'})
+    protection='編成・お気に入り・並び順を保持。使用形態は明示した第3形態指定のみ変更。変更前の値で計算し、適用後に検証' if any(r['field']=='form' and r['domain']=='cat' for r in p['conditional_rules']) else '編成・使用形態・お気に入り・並び順を保持。変更前の値で計算し、適用後に検証'
+    p['labels'].append({'key':'conditional_protection','label':protection})
     p['ready']=not p['missing'] and not p['blockers'];p['_review_required']=True;p.pop('_review_confirmed',None)
     p['inferences']=p.get('inferences',[])
     return p

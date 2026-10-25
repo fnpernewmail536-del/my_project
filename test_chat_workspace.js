@@ -25,6 +25,7 @@ async function run(){
    if(url.endsWith('/chat'))value=draft();
    if(url.endsWith('/confirm'))value={kind:'started',job_id:'test-job',operation_id:'op',labels:[],message:'開始'};
    if(url.endsWith('/menu'))value={max_defaults:{character:{base_level:60,plus_level:90},items:{}},items:[]};
+   if(url.endsWith('/complex-preview'))value={preview:{resources:{catfood:45000},collections:{},warnings:[],summary:{character_level_groups:1,characters_in_level_groups:2,talent_characters:0,unparsed_lines:0}}};
    return {ok:true,json:async()=>value};
  };
  const $=id=>doc.getElementById(id);
@@ -54,10 +55,20 @@ async function run(){
  await w.chatTest.confirmDraft();assert.equal(requests.filter(x=>x.url.endsWith('/confirm')).length,1);
  const result=w.chatTest.resultBlock({status:'done',accounts:[{tc:'test-one',ac:'0001'},{tc:'test-two',ac:'0002'}],operation_id:'op'});
  assert.match(result.textContent,/test-one/);assert.match(result.textContent,/test-two/);assert.match(result.textContent,/アカウント 2/);
+ const copied=[];Object.defineProperty(w.navigator,'clipboard',{value:{writeText:async text=>copied.push(text)}});
+ doc.body.append(result);const pairs=result.querySelectorAll('.code-pair-copy');assert.equal(pairs.length,2);
+ pairs[1].querySelector('button').click();await settle();assert.equal(copied[0],'引継ぎコード： test-two\n認証番号： 0002');
  const partial=w.chatTest.resultBlock({status:'error',accounts:[{tc:'test-one',ac:'0001'}],operation_id:'op'});
  assert.match(partial.textContent,/作成済み/);assert.match(partial.textContent,/test-one/);
  w.chatTest.showPlan({...draft(),ready:false,unresolved:[{input:'キャツアイ120',suggestions:['キャッツアイ：120']}]});
  assert.match($('plan').textContent,/候補：キャッツアイ：120/);
+ $('input').value='## アイテム\n4.猫缶：45000';
+ const confirmsBefore=requests.filter(x=>x.url.endsWith('/confirm')).length;
+ await $('complexPreview').onclick();
+ assert.ok(requests.some(x=>x.url.endsWith('/complex-preview')));
+ assert.ok(requests.some(x=>x.url.endsWith('/chat')&&x.data.message==='## アイテム\n4.猫缶：45000'));
+ assert.equal(requests.filter(x=>x.url.endsWith('/confirm')).length,confirmsBefore);
+ assert.equal($('complexPreview').disabled,false);
  console.log('Workspace checks passed: theme persistence, credentials, stale review, modes, create count, all results, suggestions.');
  dom.window.close();
 }

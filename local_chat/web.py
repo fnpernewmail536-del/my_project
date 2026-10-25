@@ -14,6 +14,7 @@ from .engine import Engine, resolve_maximums
 from .interpreter import interpret_request
 from .parser import ParseError
 from .confirmation import is_confirmation_reply
+from .review_constraints import enforce_review_constraints
 
 
 def install_chat(module):
@@ -71,6 +72,30 @@ def install_chat(module):
             if request.headers.get('Sec-Fetch-Site') == 'cross-site':
                 return jsonify(error='同じサイトから送信してください。'), 403
 
+    @bp.post('/complex-preview')
+    def complex_preview():
+        """Protected, read-only preview for long and structured Japanese requests.
+
+        Ambiguous values deliberately remain unresolved. This endpoint NEVER
+        triggers a game job and never bypasses the existing confirmation flow.
+        """
+        from daiko_chat_parser import parse
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify(error='入力が不正です。'), 400
+        message = payload.get('message')
+        if not isinstance(message, str) or not message.strip():
+            return jsonify(error='依頼文を入力してください。'), 400
+        if len(message) > 16000:
+            return jsonify(error='依頼文は16000文字以内で入力してください。'), 413
+        try:
+            parsed = parse(message)
+        except ParseError as exc:
+            return jsonify(error=str(exc)), 400
+        return jsonify(ok=True, preview=parsed,
+                       executable=False,
+                       message='解析結果です。曖昧な指定・未対応項目の確認と既存の実行処理への接続が必要です。')
+
     @bp.after_request
     def private(response):
         response.headers['Cache-Control'] = 'private, no-store'
@@ -101,6 +126,7 @@ def install_chat(module):
         return drafts[key]
 
     def review(plan):
+        enforce_review_constraints(plan)
         message = '数量と対象を確認し、よければ「確認して実行」を押してください。'
         if plan['missing']:
             message = 'あと ' + '・'.join(plan['missing']) + ' を項目名付きで送ってください。'
@@ -129,6 +155,7 @@ def install_chat(module):
             plan['missing'] += [label for key,label in [('transfer_code','引き継ぎコード'),('auth_code','認証番号')] if not plan.get(key)]
             if not plan['labels'] and '代行内容' not in plan['missing']:
                 plan['missing'].append('代行内容')
+        enforce_review_constraints(plan)
         plan['ready'] = not plan['missing'] and not plan.get('blockers')
         plan['confirmation_id'] = secrets.token_hex(32)
         plan['_operation_id'] = secrets.token_hex(15)
@@ -257,6 +284,7 @@ def install_chat(module):
             approval = is_confirmation_reply(payload.get('message')) and bool(payload.get('confirmation_id'))
             if request.path.endswith('/confirm') or approval:
                 plan = st['draft']
+                enforce_review_constraints(plan)
                 confirmation = payload.get('confirmation_id')
                 if not plan or not isinstance(confirmation, str) or not secrets.compare_digest(confirmation, plan['confirmation_id']):
                     return jsonify(error='確認内容が変わったか、有効期限が切れました。依頼から入力し直してください。'), 409
@@ -308,6 +336,8 @@ def install_chat(module):
                         if st['settings']['mode']=='create' and re.search(r'引き?継ぎ|引継ぎ|認証|transfer|auth',text,re.I):
                             raise ParseError('新規作成では引き継ぎ情報は不要です。追加したい内容だけ送ってください。')
                         plan = interpret_request(text, st['draft'], engine.character_metadata)
+                        from .targeted_engine import review_targets
+                        review_targets(module,plan)
                     except (ParseError, RuntimeError) as exc:
                         return jsonify(error=str(exc)), 400
                     configure(plan, st['settings'])

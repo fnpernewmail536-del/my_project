@@ -53,6 +53,12 @@ class ChatTests(unittest.TestCase):
                         register_job_to_session=lambda jid: session.update(job_ids=session.get('job_ids', [])+[jid]),
                         timing_profile=lambda *a: {}, executor=self.executor)
         self.env.update(safe_count=lambda d:int(d.get('count',1)),safe_account_type=lambda d:d.get('account_type','new'))
+        for node in tree.body:
+            if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id in ('LEGEND_SERIES','LEGEND_SELECTED_VALUES','MAIN_STORY_REAL_INDEX','EVENT_STAGE_FAMILIES') for target in node.targets):
+                exec(compile(ast.Module(body=[node],type_ignores=[]),'legend-constants','exec'), self.env)
+            if isinstance(node, ast.FunctionDef) and node.name in ('validate_legend_crowns_shape','compile_stage_progress','compile_legend_progress','resolve_legend_crowns','full_legend_selection'):
+                exec(compile(ast.Module(body=[node],type_ignores=[]),'legend-crowns','exec'), self.env)
+        self.env['get_legend_metadata'] = lambda:self.m.get_legend_metadata()
         for key in ('main_story_chapters', 'main_story_stages', 'event_stage_settings', 'vip_items',
                     'legend_stages', 'vip_facilities', 'vip_talent_orbs', 'special_stages',
                     'lineup_settings', 'ototo_settings', 'dojo_score_settings', 'future_score_settings'):

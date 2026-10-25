@@ -133,6 +133,12 @@ def _interpret_request_existing(text, previous=None, character_metadata=None):
     if remove:
         index=int(remove[1])-1
         if not 0<=index<len(unresolved):raise ParseError('未解釈項目の番号を確認してください。')
+        if original.get('_pending_document_ownership') and unresolved[index].get('input')=='コラボ取得対象の除外':
+            from .review_constraints import without_year_exclusion
+            updated=without_year_exclusion(original)
+            plan=interpret_request(updated,original,character_metadata)
+            plan.setdefault('inferences',[]).append({'input':'開催年によるコラボ除外とその優先条件','suggested':'明示的に取り消し。元の解放割合を含む注文書全文を再解析しました。対象数を確認してください。','method':'お客さんの条件取消'})
+            return plan
         unresolved.pop(index)
         plan=parse_request('お願いします',original)
     else:
@@ -229,8 +235,18 @@ def _interpret_request_existing(text, previous=None, character_metadata=None):
 
 
 def interpret_request(text, previous=None, character_metadata=None):
-    if not isinstance(text, str):
+    if not isinstance(text, str) or not text.strip() or len(text)>16000:
         raise ParseError('依頼を1〜16000文字で入力してください。')
+    from .character_forms import is_third_form_request,append_to_document
+    if is_third_form_request(text) and (previous or {}).get('document_rules') and not (previous or {}).get('conditional_mode'):
+        metadata=character_metadata() if callable(character_metadata) else character_metadata
+        from .review_constraints import enforce_review_constraints
+        return enforce_review_constraints(append_to_document(previous,metadata))
+    from .structured_requests import is_document, interpret_document
+    if is_document(text):
+        metadata = character_metadata() if callable(character_metadata) else character_metadata
+        from .review_constraints import enforce_review_constraints
+        return enforce_review_constraints(interpret_document(text, previous, metadata))
     from .japanese import rewrite, suggestions
     rewritten, changes = rewrite(text)
     plan = _interpret_request_existing(rewritten, previous, character_metadata)
@@ -240,4 +256,5 @@ def interpret_request(text, previous=None, character_metadata=None):
             plan.setdefault('inferences', []).append(change)
     for issue in plan.get('unresolved', []):
         issue['suggestions'] = suggestions(issue.get('input', ''))
-    return plan
+    from .review_constraints import enforce_review_constraints
+    return enforce_review_constraints(plan)

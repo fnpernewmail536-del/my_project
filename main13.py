@@ -1213,6 +1213,8 @@ def validate_common_input(data):
 
     if not validate_legend_stages_shape(data):
         return jsonify({"error": "legend_stages が不正です"}), 400
+    if not validate_legend_crowns_shape(data):
+        return jsonify({"error": "レジェンドの星は、追加なら1〜4、進行を揃える場合は0（未クリア）〜4で指定してください。"}), 400
     if not validate_detailed_stage_settings_shape(data):
         return jsonify({"error": "ステージ詳細指定が不正です"}), 400
     if not validate_labyrinth_character_settings_shape(data):
@@ -1303,7 +1305,7 @@ def compile_vip_form_extras(data):
             raise ValueError("条件付き指定と範囲指定・レア度別指定は別々に実行してください。保持や固定値も条件付き欄に追加できます。")
         if any(data.get("selected", {}).values()) or data.get("char_list") or data.get("character_settings"):
             raise ValueError("条件付き指定を使う場合は、通常の一括選択・個別キャラ選択を解除してください。")
-        if any(data.get(key) for key in ("vip_items", "legend_stages", "vip_facilities", "vip_talent_orbs", "special_stages", "main_story_stages", "event_stage_settings", "lineup_settings", "ototo_settings", "dojo_score_settings", "future_score_settings", "labyrinth_characters", "custom_playtime")):
+        if any(data.get(key) for key in ("vip_items", "legend_stages", "legend_crowns", "legend_progress", "stage_progress", "vip_facilities", "vip_talent_orbs", "special_stages", "main_story_stages", "event_stage_settings", "lineup_settings", "ototo_settings", "dojo_score_settings", "future_score_settings", "labyrinth_characters", "custom_playtime")):
             raise ValueError("条件付き指定と通常の詳細指定は別々に実行してください。")
         if data.get("account_type", "new") != "new":
             raise ValueError("条件付き作成では新規アカウントを選択してください。")
@@ -2754,6 +2756,15 @@ def _latest_jp_game_data_getter(repo_metadata=None):
     return getter
 
 
+def get_character_level_caps(character_ids, metadata=None):
+    """JPキャラ定義と同じ公開版から上限値を取得する。旧版へ置き換えない。"""
+    from local_chat.character_caps import resolve_level_caps
+    return resolve_level_caps(
+        core, metadata if metadata is not None else get_character_metadata(),
+        character_ids, _latest_jp_game_data_getter, _game_update_get,
+    )
+
+
 def _character_groups_from_series(series_members):
     """seriesIDごとのキャラ集合を画面用の安定した一覧へ変換する。"""
     groups = []
@@ -3035,6 +3046,12 @@ def _validate_character_update(candidate, current):
             raise ValueError("キャラ名の定義が不正です")
         if not isinstance(character.get("selectable"), bool) or character.get("true_form_state") not in (0, 2):
             raise ValueError("キャラ解放状態の定義が不正です")
+        if "level_caps" in character:
+            caps = character["level_caps"]
+            if (not isinstance(caps, dict)
+                    or type(caps.get("base")) is not int or not 1 <= caps["base"] <= 65535
+                    or type(caps.get("plus")) is not int or not 0 <= caps["plus"] <= 65535):
+                raise ValueError("キャラ上限の定義が不正です")
         if index < len(current["characters"]) and count < current["characters"][index]["form_count"]:
             raise ValueError("既知のキャラ形態が減っています")
         talents = character.get("talents", [])
@@ -3116,6 +3133,10 @@ def _parse_published_characters(cat_text, stat_text, pools, current, revision):
                            "rarity": rarity, "rarity_name": current["rarity_names"][rarity],
                            "selectable": selectable, "true_form_state": previous.get("true_form_state", 2),
                            "talents": talents})
+        if {"max_base_level", "max_plus_level"} <= set(row):
+            characters[-1]["level_caps"] = {
+                "base": int(row["max_base_level"]), "plus": int(row["max_plus_level"]),
+            }
     groups = copy.deepcopy(current.get("groups", []))
     def pool_key(name):
         name = unicodedata.normalize("NFKC", name).casefold()
@@ -3137,6 +3158,11 @@ def _parse_published_characters(cat_text, stat_text, pools, current, revision):
     candidate = {"data_version": core.GameVersion(data_version).to_string(), "source": "battlecatsinfo",
                  "revision": revision, "rarity_names": current["rarity_names"],
                  "characters": characters, "groups": groups}
+    if all("level_caps" in character for character in characters):
+        candidate["level_caps_provenance"] = {
+            "region": "jp", "source": "battlecatsinfo", "revision": revision,
+            "data_version": candidate["data_version"],
+        }
     return _validate_character_update(candidate, current)
 
 
@@ -4282,6 +4308,16 @@ def _set_cat_form(save, cat, form_count, requested_form=None, true_form_state=No
     return form
 
 
+def character_third_form_state(cat, definition):
+    """Return the exact third-form fields, preserving existing evolution rights."""
+    count, state = definition.get("form_count"), definition.get("true_form_state")
+    if type(count) is not int or count not in (3, 4) or type(state) is not int or state not in (0, 2):
+        raise ValueError("第3形態の実装・進化権定義が不正です。")
+    if type(cat.unlocked_forms) is not int or not 0 <= cat.unlocked_forms <= 3:
+        raise ValueError("既存の進化権を確認できません。")
+    return {"current_form": 2, "unlocked_forms": max(cat.unlocked_forms, state)}
+
+
 def _set_cat_latest_form(save, cat, form_counts=None, true_form_states=None):
     counts = form_counts or _character_form_counts()
     total_forms = counts.get(cat.id + 1)
@@ -4499,6 +4535,10 @@ def validate_legend_stages_shape(data):
 
 def validate_detailed_stage_settings_shape(data):
     """メイン・イベントのステージ別クリア回数のネストと総件数を検証する。"""
+    if "stage_progress" in data:
+        from stage_progress import valid_shape
+        if not valid_shape(data["stage_progress"]):
+            return False
     total = 0
     main_raw = data.get("main_story_stages")
     if main_raw is not None:
@@ -4729,14 +4769,85 @@ def safe_legend_stages(data):
     return result
 
 
-def full_legend_selection(series_key):
+def validate_legend_crowns_shape(data):
+    raw = data.get("legend_crowns", {})
+    progress = data.get("legend_progress", {})
+    return (isinstance(raw, dict) and not set(raw) - set(LEGEND_SERIES)
+            and all(type(value) is int and 1 <= value <= 4 for value in raw.values())
+            and isinstance(progress, dict) and not set(progress) - set(LEGEND_SERIES)
+            and all(type(value) is int and 0 <= value <= 4 for value in progress.values())
+            and not set(raw).intersection(progress))
+
+
+def compile_stage_progress(data):
+    if not data.get("stage_progress"):
+        return []
+    from types import SimpleNamespace
+    from stage_progress import compile_targets
+    return compile_targets(SimpleNamespace(**globals()), data["stage_progress"])
+
+
+def compile_legend_progress(data):
+    """Freeze exact progress targets before reserving a job or fetching an account."""
+    raw = data.get("legend_progress", {})
+    if not validate_legend_crowns_shape(data):
+        raise ValueError("レジェンドの星・進行指定が不正です。")
+    if not raw:
+        return {}
+    selected = {value for values in data.get("selected", {}).values() for value in values}
+    metadata = get_legend_metadata()
+    result = {}
+    for series, limit in raw.items():
+        if LEGEND_SELECTED_VALUES[series] not in selected and "all_stage_clear" not in selected:
+            raise ValueError("進行を指定するレジェンドの項目を選択してください。")
+        if data.get("legend_stages", {}).get(series):
+            raise ValueError("同じシリーズの星を揃える指定と、ステージ個別指定は併用できません。")
+        maps = metadata.get(series, {}).get("maps", [])
+        if not maps:
+            raise ValueError("対象レジェンドのステージ定義を読み込めませんでした。再読み込みしてください。")
+        result[series] = {"crowns": limit, "maps": copy.deepcopy(maps)}
+    return result
+
+
+def resolve_legend_crowns(data, selections):
+    """Expand the normal UI's crown limit before accepting a game job."""
+    raw = data.get("legend_crowns", {})
+    if not validate_legend_crowns_shape(data):
+        raise ValueError("レジェンドの星・進行指定が不正です。")
+    progress = data.get("legend_progress", {})
+    if not raw and not progress:
+        return selections
+    selected = {value for values in data.get("selected", {}).values() for value in values}
+    result = copy.deepcopy(selections) if selections is not None else {}
+    for series, limit in raw.items():
+        if LEGEND_SELECTED_VALUES[series] not in selected and "all_stage_clear" not in selected:
+            raise ValueError("星を指定したシリーズの全クリア項目を選択してください。")
+        if series in result:
+            # Existing individual choices take precedence; a crown limit may
+            # narrow them, but must never fill a deselected stage back in.
+            result[series] = {mid: {star: list(stages) for star, stages in stars.items() if star < limit}
+                              for mid, stars in result[series].items()}
+        else:
+            full = full_legend_selection(series, limit)
+            if not full[series]:
+                raise ValueError("対象レジェンドのステージ定義を読み込めませんでした。再読み込みしてください。")
+            result.update(full)
+    # Even an all-uncleared request must suppress the legacy unlimited clear.
+    for series in progress:
+        result[series] = {}
+    return result
+
+
+def full_legend_selection(series_key, max_crowns=None):
     """指定シリーズの実装済み章・冠・ステージをすべて選択した形にする。"""
+    if max_crowns is not None and (type(max_crowns) is not int or not 1 <= max_crowns <= 4):
+        raise ValueError("星の上限は1〜4で指定してください。")
     metadata = get_legend_metadata().get(series_key, {})
     maps = {}
     for map_spec in metadata.get("maps", []):
         maps[map_spec["id"]] = {
             star: list(range(len(map_spec["stages"])))
-            for star in range(map_spec["crowns"])
+            for star in range(min(map_spec["crowns"], max_crowns or 4))
         }
     return {series_key: maps}
 
@@ -4930,6 +5041,104 @@ def apply_legend_stages(save, selections):
     if 0 in idi_stages:
         _sync_idi_clear(save)
         logs.append("イディ取得・撃破済み")
+    return logs
+
+
+def _legend_progress_container(save, series):
+    if series == "legend":
+        return save.event_stages.chapters[0]
+    if series == "true_legend":
+        return save.uncanny.chapters
+    if series == "zero_legend":
+        return save.zero_legends
+    raise ValueError("レジェンドの系列が不正です。")
+
+
+def _ensure_legend_progress_slots(save, plans):
+    """Extend native arrays without removing unknown/newer rows or fields."""
+    if "legend" in plans:
+        from types import SimpleNamespace
+        from local_chat.targeted_engine import ensure_slots
+        ensure_slots(SimpleNamespace(core=core), save, [
+            {**spec, "kind": "event", "group": 0}
+            for spec in plans["legend"]["maps"]
+        ])
+    if "true_legend" in plans:
+        container = save.uncanny.chapters
+        maps = plans["true_legend"]["maps"]
+        nm = max([len(container.chapters)] + [spec["id"] + 1 for spec in maps])
+        ns = max([len(item.chapters) for item in container.chapters] + [spec["crowns"] for spec in maps])
+        nt = max([len(chapter.stages) for item in container.chapters for chapter in item.chapters]
+                 + [len(spec["stages"]) for spec in maps])
+        lib = core.game.map.chapters
+        while len(container.chapters) < nm:
+            container.chapters.append(lib.ChaptersStars.init(nt, ns))
+        for item in container.chapters:
+            while len(item.chapters) < ns:
+                item.chapters.append(lib.Chapter.init(nt))
+            for chapter in item.chapters:
+                while len(chapter.stages) < nt:
+                    chapter.stages.append(lib.Stage.init())
+        while len(save.uncanny.unknown) < nm:
+            save.uncanny.unknown.append(0)
+    if "zero_legend" in plans:
+        specs = {item["id"]: item for item in plans["zero_legend"]["maps"]}
+        for map_id in sorted(specs):
+            if not _ensure_zero_map(save, map_id, specs):
+                raise ValueError("零レジェンドの保存枠とステージ定義を照合できません。")
+
+
+def apply_legend_progress(save, plans):
+    """Set only known stage progress; keep obtained characters and rewards."""
+    if not plans:
+        return []
+    metadata = get_legend_metadata()
+    for series, plan in plans.items():
+        if metadata.get(series, {}).get("maps") != plan["maps"]:
+            raise ValueError("レジェンドのステージ定義が変更されました。再読み込みして指定し直してください。")
+    _ensure_legend_progress_slots(save, plans)
+    expected = []
+    logs = []
+    for series, plan in plans.items():
+        container = _legend_progress_container(save, series)
+        first_map = min(item["id"] for item in plan["maps"])
+        for spec in plan["maps"]:
+            for star in range(spec["crowns"]):
+                chapter = container.chapters[spec["id"]].chapters[star]
+                cleared = star < plan["crowns"]
+                for stage in chapter.stages[:len(spec["stages"])]:
+                    if cleared:
+                        stage.clear_stage(1, ensure_cleared_only=True)
+                    else:
+                        stage.unclear_stage()
+                chapter.clear_progress = len(spec["stages"]) if cleared else 0
+                if cleared:
+                    chapter.selected_stage = min(max(0, chapter.selected_stage), len(spec["stages"]) - 1)
+                    unlock = 3
+                else:
+                    chapter.selected_stage = 0
+                    # Keep the next playable crown open. A fully reset series
+                    # starts with its first map's first crown accessible.
+                    unlock = int(star == plan["crowns"] and (plan["crowns"] > 0 or spec["id"] == first_map))
+                chapter.chapter_unlock_state = unlock
+                if series == "zero_legend":
+                    chapter.unlock_state = unlock  # This is the persisted field.
+                expected.append((series, spec["id"], star, copy.deepcopy(chapter.serialize())))
+        label = LEGEND_SERIES[series]["label"]
+        state = f'★{plan["crowns"]}までクリア・上位の星は未クリア' if plan["crowns"] else "全て未クリア"
+        logs.append(f"{label}：{state}")
+    old = plans.get("legend", {})
+    if old.get("crowns") == 4 and any(item["id"] == 48 and item["crowns"] == 4 for item in old["maps"]):
+        _sync_idi_clear(save)
+    # Reject a save format that cannot retain the requested progress before
+    # codes are issued. Zero uses a different persisted unlock field.
+    loaded = core.SaveFile(core.Data(save.to_data().data), cc=save.cc)
+    if loaded.game_version.game_version != save.game_version.game_version:
+        raise RuntimeError("レジェンド進行変更後の保存版数が一致しません。")
+    for series, map_id, star, values in expected:
+        actual = _legend_progress_container(loaded, series).chapters[map_id].chapters[star].serialize()
+        if actual != values:
+            raise RuntimeError("レジェンドの星・未クリア状態を保存できませんでした。送信を停止しました。")
     return logs
 
 
@@ -6134,6 +6343,14 @@ def _apply_all_segments_unlocked(save_file, selected, char_list, custom_amounts,
         final_logs.append(f"獲得済みメダルのNew通知を解除({changed}件)")
     reward_actions = set().union(*(set(segment) for segment in (s1, s2, s3, s4)))
     final_logs.extend(_apply_user_rank_reward_actions(save_file, reward_actions))
+    # Apply exact progress last so an all-stage action cannot restore the
+    # higher crowns that this request deliberately marks as uncleared.
+    if custom_amounts.get("_stage_progress"):
+        from types import SimpleNamespace
+        from stage_progress import apply_targets
+        final_logs.extend(apply_targets(SimpleNamespace(**globals()), save_file, custom_amounts["_stage_progress"]))
+    if custom_amounts.get("_legend_progress"):
+        final_logs.extend(apply_legend_progress(save_file, custom_amounts["_legend_progress"]))
     return final_logs
 
 
@@ -6810,19 +7027,26 @@ def api_run_daiko():
         return vip_required_response()
     if is_vip_confirmed:
         try:
+            stage_progress_plan = compile_stage_progress(data)
+            progress = compile_legend_progress(data)
+            crown_selections = resolve_legend_crowns(data, safe_legend_stages(data) if "legend_stages" in data else None)
             extras = compile_vip_form_extras(data)
         except (ValueError, TypeError, KeyError) as exc:
             return jsonify({"error": str(exc)}), 400
         except Exception as exc:
             print(f"[VIP FORM] metadata unavailable: {type(exc).__name__}")
             return jsonify({"error": "詳細設定に必要な定義を確認できません。少し待って再実行してください。"}), 503
+        if stage_progress_plan:
+            custom_amounts["_stage_progress"] = stage_progress_plan
+        if progress:
+            custom_amounts["_legend_progress"] = progress
         if extras:
             custom_amounts["_vip_form_extras"] = extras
         main_story_chapters = safe_main_story_chapters(data)
         main_story_stages = safe_main_story_stages(data)
         event_stage_settings = safe_event_stage_settings(data)
         vip_items = safe_vip_items(data)
-        legend_stages = safe_legend_stages(data) if "legend_stages" in data else None
+        legend_stages = crown_selections
         vip_facilities = safe_vip_facilities(data) if "vip_facilities" in data else None
         vip_talent_orbs = safe_vip_talent_orbs(data) if "vip_talent_orbs" in data else None
         special_stages = safe_special_stages(data) if "special_stages" in data else None
@@ -6946,12 +7170,19 @@ def api_run_create():
         return vip_required_response()
     if is_vip_confirmed:
         try:
+            stage_progress_plan = compile_stage_progress(data)
+            progress = compile_legend_progress(data)
+            crown_selections = resolve_legend_crowns(data, safe_legend_stages(data) if "legend_stages" in data else None)
             extras = compile_vip_form_extras(data)
         except (ValueError, TypeError, KeyError) as exc:
             return jsonify({"error": str(exc)}), 400
         except Exception as exc:
             print(f"[VIP FORM] metadata unavailable: {type(exc).__name__}")
             return jsonify({"error": "詳細設定に必要な定義を確認できません。少し待って再実行してください。"}), 503
+        if stage_progress_plan:
+            custom_amounts["_stage_progress"] = stage_progress_plan
+        if progress:
+            custom_amounts["_legend_progress"] = progress
         if extras:
             custom_amounts["_vip_form_extras"] = extras
         count = safe_count(data)
@@ -6960,7 +7191,7 @@ def api_run_create():
         main_story_stages = safe_main_story_stages(data)
         event_stage_settings = safe_event_stage_settings(data)
         vip_items = safe_vip_items(data)
-        legend_stages = safe_legend_stages(data) if "legend_stages" in data else None
+        legend_stages = crown_selections
         vip_facilities = safe_vip_facilities(data) if "vip_facilities" in data else None
         vip_talent_orbs = safe_vip_talent_orbs(data) if "vip_talent_orbs" in data else None
         special_stages = safe_special_stages(data) if "special_stages" in data else None

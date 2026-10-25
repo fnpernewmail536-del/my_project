@@ -1,0 +1,128 @@
+{
+  "source": "battlecatsinfo",
+  "revision": "4baf8c1b468230a14f9350d646f60d888e3fe75d",
+  "data_version": "15.7.0",
+  "characters": [
+    {
+      "id": 1,
+      "names": [
+        "ネコ",
+        "ネコビルダー",
+        "ネコモヒカン"
+      ],
+      "rarity": 0,
+      "form_count": 3,
+      "true_form_state": 0,
+      "selectable": true
+    },
+    {
+      "id": 2,
+      "names": [
+        "タンクネコ",
+        "ネコカベ",
+        "ゴムネコ"
+      ],
+      "rarity": 0,
+      "form_count": 3,
+      "true_form_state": 0,
+      "selectable": true
+    },
+    {
+      "id": 3,
+      "names": [
+        "バトルネコ",
+        "勇者ネコ",
+        "暗黒ネコ"
+      ],
+      "rarity": 0,
+      "form_count": 3,
+      "true_form_state": 0,
+      "selectable": true
+    },
+    {
+      "id": 4,
+      "names": [
+        "キモネコ",
+        "美脚ネコ",
+        "ムキあしネコ"
+      ],
+      "rarity": 0,
+      "form_count": 3,
+      "true_form_state": 0,
+      "selectable": true
+    },
+    {
+      "id": 5,
+      "names": [
+        "ウシネコ",
+        "ネコキリン",
+        "ネコライオン"
+      ],
+      "rarity": 0,
+      "form_count": 3,
+      "true_form_state": 0,
+      "selectable": true
+    },
+    {
+      "id": 6,
+      "names": [
+        "ネコノトリ",
+        "ネコＵＦＯ",
+        "天空のネコ"
+      ],
+      "rarity": 0,
+      "form_count": 3,
+      "true_form_state": 0,
+      "selectable": true
+    },
+    {
+      "id": 7,
+      "names": [
+        "ネコフィッシュ",
+        "ネコクジラ",
+        "ネコ島"
+      ],
+      "rarity": 0,
+      "form_count": 3,
+      "true_form_state": 0,
+      "selectable": true
+    },
+    {
+      "id": 8,
+      "names": [
+        "ネコトカゲ",
+        "ネコドラゴン",
+        "ネコキングドラゴン"
+      ],
+      "rarity": 0,
+      "form_count": 3,
+      "true_form_state": 0,
+      "selectable": true
+    },
+    {
+      "id": 9,
+      "names": [
+        "巨神ネコ",
+        "ネコダラボッチ",
+        "ネコジャラミ"
+      ],
+      "rarity": 0,
+      "form_count": 3,
+      "true_form_state": 0,
+      "selectable": true
+    },
+    {
+      "id": 644,
+      "names": [
+        "ネコ超人",
+        "ネコ超人Ⅱ",
+        "真ネコ超人"
+      ],
+      "rarity": 0,
+      "form_count": 3,
+      "true_form_state": 0,
+      "selectable": true
+    }
+  ],
+  "groups": []
+}

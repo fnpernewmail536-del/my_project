@@ -1,0 +1,18 @@
+.legend-crown-settings {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface2);
+}
+.legend-crown-settings[hidden], .legend-crown-row[hidden] { display: none; }
+.legend-crown-heading { font-weight: 700; margin-bottom: 10px; }
+.legend-crown-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0; }
+.legend-crown-row label { font-size: 13px; font-weight: 600; }
+.legend-crown-row select { min-width: 160px; min-height: 40px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; }
+.legend-crown-row select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.legend-crown-help { margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+@media (max-width: 480px) {
+  .legend-crown-row { align-items: stretch; flex-direction: column; gap: 5px; margin: 12px 0; }
+  .legend-crown-row select { width: 100%; min-width: 0; }
+}

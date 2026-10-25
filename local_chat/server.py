@@ -17,6 +17,7 @@ from .engine import Engine
 from .parser import parse_request, ParseError
 from .menus import CATALOGUE
 from .interpreter import interpret_request
+from .review_constraints import enforce_review_constraints
 from .confirmation import is_confirmation_reply
 import copy
 
@@ -54,6 +55,7 @@ class State:
     def submit(self, owner, request_id, plan):
         # Receipt check and job registration are protected across concurrent requests.
         with self.lock:
+            enforce_review_constraints(plan)
             if not plan.get('ready') or plan.get('blockers') or not plan.get('_review_confirmed'):
                 raise ParseError('確認が必要な項目があります。まだ実行していません。')
             with self.db() as db:
@@ -118,6 +120,7 @@ class State:
 
     @staticmethod
     def draft_response(plan):
+        enforce_review_constraints(plan)
         reasons=plan.get('blockers',[])
         message='次の内容で合っていますか？数量と対象を確認し、よければ「確認して実行」を押してください。'
         if plan['missing']:message='読み取りました。あと '+ '・'.join(plan['missing'])+' を送ってください。実行前に内容を確認します。'
@@ -192,7 +195,7 @@ def make_handler(state):
                 return self.send(200 if job else 404,job or {'error':'処理が見つかりません。'})
             static={'/':('index.html','text/html; charset=utf-8'),'/app.js':('app.js','application/javascript; charset=utf-8'),'/style.css':('style.css','text/css; charset=utf-8')}
             if path in static:
-                name,mime=static[path];return self.send(200,(ROOT/'static'/name).read_bytes(),mime)
+                name,mime=static[path];return self.send(200,(ROOT/'local_static'/name).read_bytes(),mime)
             self.send(404,{'error':'not found'})
 
         def do_POST(self):
@@ -220,10 +223,11 @@ def make_handler(state):
                 if path=='/api/confirm' or approval_reply:
                     if state.recover_confirmation_reply(self.session):
                         response=state.draft_response(self.session['draft'])
-                        response['message']='承認の返事を認識しました。数量と対象をもう一度確認してから「確認して実行」を押してください。'
+                        if response['ready']:response['message']='承認の返事を認識しました。数量と対象をもう一度確認してから「確認して実行」を押してください。'
                         if approval_reply: self.remember_chat(rid,response)
                         return self.send(200,response)
                     plan=self.session['draft'];confirmation=payload.get('confirmation_id')
+                    enforce_review_constraints(plan)
                     if approval_reply and confirmation is None:
                         if plan:
                             response=state.draft_response(plan)
@@ -248,6 +252,8 @@ def make_handler(state):
                 try:
                     state.recover_confirmation_reply(self.session)
                     plan=interpret_request(payload.get('message'),self.session['draft'],getattr(state.engine,'character_metadata',None))
+                    from .targeted_engine import review_targets
+                    review_targets(getattr(state.engine,'module',None),plan)
                     plan['confirmation_id']=secrets.token_hex(32)
                     self.session['draft']=plan
                     response=state.draft_response(plan)

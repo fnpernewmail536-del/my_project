@@ -3,6 +3,7 @@ const $ = id => document.getElementById(id);
 let csrf = '', sending = false, lastRequest = null, lastConfirmation = null, confirmationId = '', canConfirm = false, activeJobs = new Map(), engineErrorShown = false;
 let settingsDirty=false,credentialsDirty=false;
 const labels = {pending:'待機中',running:'処理中',done:'完了',error:'エラー',interrupted:'中断'};
+const draftReady = data => !!data.ready && !(data.blockers||[]).length && !(data.unresolved||[]).length && !(data.missing||[]).length;
 function el(tag, cls, text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 function message(text, kind='bot'){
   if(kind==='user')text=text.replace(/((?:引き継ぎコード|引継ぎコード|認証番号)\s*[:：=]?\s*)[a-z0-9]+/gi,'$1••••');
@@ -20,6 +21,14 @@ function codeRow(label,value){
   const row=el('div','code-row');row.append(el('span','',label),el('code','',value));
   const copy=el('button','copy','コピー');copy.type='button';copy.onclick=async()=>{try{await navigator.clipboard.writeText(value);toast('コピーしました');}catch{toast('コードを選択してコピーしてください');}};row.append(copy);return row;
 }
+function codePair(tc,ac){
+  const row=el('div','code-pair-copy');
+  const text=el('textarea');text.readOnly=true;text.rows=2;text.value=`引継ぎコード： ${tc}\n認証番号： ${ac}`;text.setAttribute('aria-label','引継ぎコードと認証番号');
+  const button=el('button','copy','まとめてコピー');button.type='button';button.onclick=async()=>{
+    let copied=false;try{await navigator.clipboard.writeText(text.value);copied=true;}catch{text.focus();text.select();try{copied=document.execCommand('copy');}catch{}}
+    toast(copied?'まとめてコピーしました':'選択した2行を手動でコピーしてください');
+  };row.append(text,button);return row;
+}
 function resultBlock(job){
   const block=el('div','codeblock');
   block.append(el('div','result-title',job.status==='done'?'代行が完了しました。':(job.error||job.log||labels[job.status]||'確認中')));
@@ -27,11 +36,11 @@ function resultBlock(job){
   if(job.accounts?.length){
     if(job.status!=='done')block.append(el('div','','作成済みのアカウントです。重複実行せず、結果を確認してください。'));
     for(const [index,account] of job.accounts.entries()){
-      codes.append(el('strong','','アカウント '+(index+1)),codeRow('引き継ぎコード',account.tc),codeRow('認証番号',account.ac));
+      codes.append(el('strong','','アカウント '+(index+1)),codeRow('引き継ぎコード',account.tc),codeRow('認証番号',account.ac),codePair(account.tc,account.ac));
     }
   }
-  else if(job.status==='done'&&job.transfer_code&&job.auth_code){codes.append(codeRow('引き継ぎコード',job.transfer_code),codeRow('認証番号',job.auth_code));}
-  else if(job.recovery_transfer_code&&job.recovery_auth_code){block.append(el('div','','作業前の復旧用コード'));codes.append(codeRow('復旧用コード',job.recovery_transfer_code),codeRow('認証番号',job.recovery_auth_code));}
+  else if(job.status==='done'&&job.transfer_code&&job.auth_code){codes.append(codeRow('引き継ぎコード',job.transfer_code),codeRow('認証番号',job.auth_code),codePair(job.transfer_code,job.auth_code));}
+  else if(job.recovery_transfer_code&&job.recovery_auth_code){block.append(el('div','','作業前の復旧用コード'));codes.append(codeRow('復旧用コード',job.recovery_transfer_code),codeRow('認証番号',job.recovery_auth_code),codePair(job.recovery_transfer_code,job.recovery_auth_code));}
   block.append(codes);
   if(job.applied?.length)block.append(el('div','history-labels',job.applied.join(' / ')));
   if(job.backup_before_saved)block.append(el('div','history-labels','64番：代行前バックアップを保存済み'));
@@ -48,7 +57,7 @@ function reviewBlock(data){
   const list=el('ul');for(const item of data.labels||[])list.append(el('li','',item.label));block.append(list);
   if(data.quoted_prices?.length)block.append(quotedPricesBlock(data.quoted_prices));
   if(data.inferences?.length){block.append(el('strong','','推測した表現'));for(const item of data.inferences)block.append(el('div','history-labels',item.input+' → '+item.suggested));}
-  block.append(el('div','history-labels',data.ready?'合っていれば「確認して実行」、または「はい」と返信してください。':'不足・未解釈の項目を補ってから確認します。'));
+  block.append(el('div','history-labels',draftReady(data)?'合っていれば「確認して実行」、または「はい」と返信してください。':'不足・未解釈の項目を補ってから確認します。'));
   return block;
 }
 function showPlan(data){
@@ -69,7 +78,7 @@ function showPlan(data){
   for(const [index,item] of (data.unresolved||[]).entries()){
     const row=el('div','plan-item blocker');row.append(el('div','','未解釈項目'+(index+1)+'：'+item.input));
     const edit=el('button','copy','訂正する');edit.type='button';edit.onclick=()=>{$('input').value='未解釈項目'+(index+1)+'=';$('input').focus();};
-    const omit=el('button','copy','この項目は不要');omit.type='button';omit.onclick=()=>sendText('未解釈項目'+(index+1)+'不要');row.append(edit,omit);$('plan').append(row);
+    const omit=el('button','copy',item.omit_label||'この項目は不要');omit.type='button';omit.disabled=item.dismissible===false;omit.onclick=()=>{if(!omit.disabled)sendText('未解釈項目'+(index+1)+'不要');};row.append(edit,omit);$('plan').append(row);
     for(const candidate of item.suggestions||[]){
       const suggest=el('button','copy','候補：'+candidate);suggest.type='button';
       suggest.onclick=()=>sendText('未解釈項目'+(index+1)+'='+candidate);row.append(suggest);
@@ -80,8 +89,8 @@ function showPlan(data){
   $('stepContent').classList.toggle('done',!!data.labels?.length);
   $('stepCodes').classList.toggle('done',!!data.labels?.length&&!missing.includes('引き継ぎコード')&&!missing.includes('認証番号'));
   $('stepRun').classList.toggle('done',data.kind==='started');
-  $('runDraft').hidden=!(data.ready&&data.kind!=='started'&&!credentialsDirty&&!settingsDirty);
-  confirmationId=data.confirmation_id||'';canConfirm=!!data.ready&&data.kind!=='started'&&!!confirmationId&&!credentialsDirty&&!settingsDirty;
+  $('runDraft').hidden=!(draftReady(data)&&data.kind!=='started'&&!credentialsDirty&&!settingsDirty);
+  confirmationId=data.confirmation_id||'';canConfirm=draftReady(data)&&data.kind!=='started'&&!!confirmationId&&!credentialsDirty&&!settingsDirty;
 }
 function showSettings(settings){
   $('requestMode').value=settings.mode||'daiko';
@@ -165,6 +174,29 @@ document.querySelectorAll('[data-view]').forEach(button=>button.onclick=()=>{
   document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x===button));$('pageLabel').textContent={chat:'代行チャット',history:'実行履歴',help:'使い方・対応メニュー'}[view];if(view==='history')history();
 });
 document.querySelectorAll('[data-example]').forEach(button=>button.onclick=()=>{$('input').value=button.dataset.example;$('input').focus();});
+$('complexPreview').onclick=async()=>{
+  const value=$('input').value.trim();
+  if(!value){toast('依頼文を入力してください。');return;}
+  if(value.length>16000){toast('16000文字以内で入力してください。');return;}
+  if(sending)return;
+  const btn=$('complexPreview');btn.disabled=true;
+  canConfirm=false;confirmationId='';lastConfirmation=null;$('runDraft').hidden=true;busy(true);
+  try{
+    const response=await api('/complex-preview',{message:value});
+    const p=response.preview;
+    const result=message('長文解析プレビュー（まだ実行されていません）\n'
+      +'数値：'+JSON.stringify(p.resources)+'\n範囲：'+JSON.stringify(p.collections)
+      +'\nキャラグループ：'+p.summary.character_level_groups+'件、対象：'+p.summary.characters_in_level_groups+'体'
+      +'\n本能対象：'+p.summary.talent_characters+'体'
+      +'\n未解析行：'+p.summary.unparsed_lines+'件\n'
+      +'未確定・要確認：'+(p.warnings.join(' / ')||'実行内容の確認が必要です'));
+    const pre=el('pre','',JSON.stringify(p,null,2));pre.style.whiteSpace='pre-wrap';
+    pre.style.maxHeight='320px';pre.style.overflow='auto';result.append(pre);
+    busy(false);
+    await sendText(value);
+  }catch(e){message('解析できませんでした：'+e.message,'error');}
+  finally{busy(false);btn.disabled=false;}
+};
 $('composer').onsubmit=event=>{event.preventDefault();const text=$('input').value.trim();if(text)sendText(text);};
 $('input').onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();$('composer').requestSubmit();}};
 $('runDraft').onclick=()=>confirmDraft();

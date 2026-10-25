@@ -1,0 +1,149 @@
+{
+  "data_version": "15.7.0",
+  "source": "battlecatsinfo",
+  "revision": "4baf8c1b468230a14f9350d646f60d888e3fe75d",
+  "rarity_names": [
+    "基本キャラ",
+    "EX",
+    "レア",
+    "激レア",
+    "超激レア",
+    "伝説レア"
+  ],
+  "characters": [
+    {
+      "id": 45,
+      "names": [
+        "鬼にゃんま",
+        "鬼神にゃんま",
+        "獄炎鬼にゃんま"
+      ],
+      "form_count": 3,
+      "rarity": 4,
+      "rarity_name": "超激レア",
+      "selectable": true,
+      "true_form_state": 2,
+      "talents": [
+        {
+          "id": 10,
+          "name": "体力低下で攻撃力が上がる能力を強化します",
+          "max_level": 10,
+          "category": "本能",
+          "ultra": false,
+          "slot": 0
+        },
+        {
+          "id": 22,
+          "name": "「波動ダメージ耐性」の能力を解放します",
+          "max_level": 10,
+          "category": "本能",
+          "ultra": false,
+          "slot": 1
+        },
+        {
+          "id": 32,
+          "name": "キャラクターの基本体力が上がります",
+          "max_level": 10,
+          "category": "本能",
+          "ultra": false,
+          "slot": 2
+        },
+        {
+          "id": 31,
+          "name": "キャラクターの基本攻撃力が上がります",
+          "max_level": 10,
+          "category": "本能",
+          "ultra": false,
+          "slot": 3
+        },
+        {
+          "id": 25,
+          "name": "キャラクターの生産コストを減少します",
+          "max_level": 10,
+          "category": "本能",
+          "ultra": false,
+          "slot": 4
+        }
+      ]
+    },
+    {
+      "id": 732,
+      "names": [
+        "暁のイザナギ",
+        "暁光のイザナギ"
+      ],
+      "form_count": 2,
+      "rarity": 5,
+      "rarity_name": "伝説レア",
+      "selectable": true,
+      "true_form_state": 2,
+      "talents": []
+    },
+    {
+      "id": 878,
+      "names": [
+        "いなばの白うさぎ",
+        "メガシャークVS白うさぎ"
+      ],
+      "form_count": 2,
+      "rarity": 4,
+      "rarity_name": "超激レア",
+      "selectable": true,
+      "true_form_state": 2,
+      "talents": []
+    },
+    {
+      "id": 879,
+      "names": [
+        "悠久山安慈",
+        "悠久山安慈CC"
+      ],
+      "form_count": 2,
+      "rarity": 4,
+      "rarity_name": "超激レア",
+      "selectable": true,
+      "true_form_state": 2,
+      "talents": []
+    },
+    {
+      "id": 880,
+      "names": [
+        "瀬田宗次郎",
+        "瀬田宗次郎CC"
+      ],
+      "form_count": 2,
+      "rarity": 4,
+      "rarity_name": "超激レア",
+      "selectable": true,
+      "true_form_state": 2,
+      "talents": []
+    },
+    {
+      "id": 881,
+      "names": [
+        "志々雄真実",
+        "志々雄真実CC"
+      ],
+      "form_count": 2,
+      "rarity": 4,
+      "rarity_name": "超激レア",
+      "selectable": true,
+      "true_form_state": 2,
+      "talents": []
+    },
+    {
+      "id": 882,
+      "names": [
+        "比古清十郎",
+        "比古清十郎CC"
+      ],
+      "form_count": 2,
+      "rarity": 5,
+      "rarity_name": "伝説レア",
+      "selectable": true,
+      "true_form_state": 2,
+      "talents": []
+    }
+  ],
+  "groups": []
+}

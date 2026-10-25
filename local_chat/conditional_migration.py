@@ -3,7 +3,8 @@ from .menus import MAX_ITEM_AMOUNTS
 
 def migrate(plan):
     if plan.get('conditional_mode'):return [],[]
-    rules=[];issues=[]
+    import copy
+    rules=copy.deepcopy(plan.get('document_rules',[]));issues=[]
     def add(domain,field,expr,**kw):rules.append({'domain':domain,'field':field,'expr':expr,'label':'以前の指定：'+field,**kw})
     def expr(v):return {'op':'keep' if v=='keep' else 'max'} if v in ('keep','max') else {'op':'range','bounds':list(v)} if isinstance(v,(list,tuple)) else {'op':'set','value':int(v)}
     for group,keys in plan.get('selected',{}).items():
@@ -62,9 +63,12 @@ def migrate(plan):
     return rules,issues
 
 def display(rule):
+    if rule['domain']=='cat' and rule['field']=='form':
+        return rule.get('label','形態指定')+' → 使用形態：第3形態（対応する所持済み・今回解放キャラのみ。第4形態の解放権は保持）'
     expr=rule['expr'];op=expr['op']
     value={'keep':'現在の値を保持','max':'上限まで','set':str(expr.get('value','')),'range':('〜'.join(map(str,expr.get('bounds',[])))+'から個別に抽選'),'add':('現在値に'+str(expr.get('value',''))+'追加'),'mul':('現在値の'+str(expr.get('value',''))+'倍・切り捨て'),'atleast':(str(expr.get('value',''))+'以上へ')}.get(op,op)
-    fields={'base':'基本Lv','plus':'＋値','unlocked':'解放状態','treasure':'お宝','clear':'クリア状況','talent':'本能','amount':'数量','forms':'解放形態','playtime':'プレイ時間','gamatoto_level':'ガマトトLv','rank':'ユーザーランク（指定キャラの＋値で調整）','count':'所持数（指定候補だけ解放）','highest':'最高到達階','composition':'隊員構成'}
+    if op=='percent':value=('所持済みを含む対象全体の所持率' if rule['domain']=='ownership' else '各本能の上限Lvの')+str(expr['value'])+'%（端数切り捨て）'
+    fields={'base':'基本Lv','plus':'＋値','unlocked':'解放状態','treasure':'お宝','clear':'クリア状況','score':'採点スコア','talent':'本能','amount':'数量','forms':'解放形態','playtime':'プレイ時間','gamatoto_level':'ガマトトLv','rank':'ユーザーランク（指定キャラの＋値で調整）','count':'所持数（指定候補だけ解放）','highest':'最高到達階','composition':'隊員構成'}
     if rule['field']=='playtime' and op=='set':
         seconds=int(expr['value']);value=f'{seconds//3600}時間{seconds//60%60}分{seconds%60}秒'
     if rule['domain']=='helper_mix':value='・'.join(f'{key}{count}体' for key,count in rule['composition'].items())+('・既存非レジェンド'+str(rule['keep_nonlegend'])+'体を保持' if rule.get('keep_nonlegend') else '')

@@ -38,8 +38,7 @@ def fixture():
         raise AssertionError(name)
     module=NS(core=core,get_character_metadata=lambda:metadata,get_legend_metadata=lambda:legend,
               _latest_jp_game_data_getter=lambda:NS(download=download),VIP_ITEM_LABELS=labels)
-    source=Path(__file__).resolve().parents[1]/'theme_update_source/main13.py'
-    if not source.exists():source=Path(__file__).resolve().parents[1]/'my_project/main13.py'
+    source=Path(__file__).resolve().parent/'main13.py'
     if source.exists():
         tree=ast.parse(source.read_text());functions={'_labyrinth_value','_set_labyrinth_value','_labyrinth_unlocked_cat_ids','_sync_labyrinth_remaining','apply_labyrinth_stages'}
         env={};exec(compile(ast.Module(body=[n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in functions],type_ignores=[]),'labyrinth','exec'),env)

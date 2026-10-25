@@ -43,12 +43,9 @@ def compile_extended(module, compiled):
                 # Rank adjustment is confined to plus values in the explicit list.
                 if any(other['domain']=='cat' and other['field']=='plus' and set(other.get('ids',[]))&ids for other in rules):
                     raise ParseError('ランク調整対象に＋値の個別指定があります。別の対象を指定するか別依頼に分けてください。')
-                rows=list(module.core.CSV(download('DataLocal','unitbuy.csv')))
                 caps=compiled.setdefault('caps',{})
-                for cid in ids:
-                    if cid>len(rows) or len(rows[cid-1])<=51 or rows[cid-1][13].to_int()!=int(compiled['characters'][cid]['rarity']):
-                        raise ParseError('ランク調整対象の上限定義が一致しません：No.'+str(cid))
-                    caps[cid]={'base':max(1,rows[cid-1][50].to_int()),'plus':max(0,rows[cid-1][51].to_int())}
+                from .character_caps import get_level_caps
+                caps.update(get_level_caps(module,metadata,ids))
             elif not 0<=r['expr']['value']<=len(compiled['characters']):raise ParseError('所持数がキャラ定義の範囲外です。')
     for r in advanced:
         domain=r['domain'];number=r['expr']['value']
