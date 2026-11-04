@@ -136,15 +136,21 @@ def compile_conditional(module,plan):
     for r in rules:
         if r['domain']=='items':r['priority']=3 if r.get('names') else 0
         if r['domain']=='orbs':r['priority']=1 if r.get('rank') else 0
-        if r['domain']=='items' and r.get('names'):
-            names=result['legend_metadata'].get('vip_item_groups',{}).get(r['group']) or getattr(module,'VIP_ITEM_LABELS',{}).get(r['group'])
-            if not names:raise ParseError('アイテム種類の名前定義がありません：'+r['group'])
-            indices=[]
-            for name in r['names']:
-                matches=[i for i,n in enumerate(names) if name_key(name)==name_key(n)]
-                if len(matches)!=1:raise ParseError('アイテム種類を一意に特定できません：'+name)
-                indices.append(matches[0])
-            r['indices']=indices
+        if r['domain']=='items':
+            group=r['group']
+            scope=group if group in ('matatabi','stones') else None
+            source='catfruit' if scope else group
+            if scope or r.get('names'):
+                names=result['legend_metadata'].get('vip_item_groups',{}).get(source) or getattr(module,'VIP_ITEM_LABELS',{}).get(source)
+                if not names:raise ParseError('アイテム種類の名前定義がありません：'+group)
+                candidates=module.material_item_indices(scope,names) if scope else range(len(names))
+                if not candidates:raise ParseError('指定された素材の種類定義がありません。')
+                indices=[]
+                for name in r.get('names',[]):
+                    matches=[i for i in candidates if name_key(name)==name_key(names[i])]
+                    if len(matches)!=1:raise ParseError('アイテム種類を一意に特定できません：'+name)
+                    indices.append(matches[0])
+                r['indices']=indices or list(candidates)
         if r['domain']=='event'  and r.get('family')!='aku':
             maps=result['legend_metadata'].get('event_stage_families',{}).get(r['family'],{}).get('maps',[])
             if r.get('map_name'):maps=[m for m in maps if r['map_name'] in m['name']]
@@ -227,10 +233,11 @@ def apply_conditional(module,save,compiled):
                 elif field=='forms':
                     put(f'cat:{cid}:forms',cat.unlocked_forms,lambda c=cat:c.unlocked_forms,lambda v,c=cat:setattr(c,'unlocked_forms',v),{**r,'no_decrease':True},max(cat.unlocked_forms,min(3,int(compiled['characters'][cid].get('form_count',1)))))
         elif domain=='items':
-            group=r['group'];names=meta.get('vip_item_groups',{}).get(group) or getattr(module,'VIP_ITEM_LABELS',{}).get(group)
+            group=r['group'];source='catfruit' if group in ('matatabi','stones') else group
+            names=meta.get('vip_item_groups',{}).get(source) or getattr(module,'VIP_ITEM_LABELS',{}).get(source)
             if group=='battle_items':items=save.battle_items.items
             elif group=='base_materials':items=save.ototo.base_materials.materials
-            else:items=getattr(save,group)
+            else:items=getattr(save,source)
             target=r.get('names')
             if r.get('indices') is not None:ids=r['indices']
             elif target:
@@ -246,8 +253,8 @@ def apply_conditional(module,save,compiled):
                 item=items[i]
                 if hasattr(item,'amount'):get=lambda x=item:x.amount;setter=lambda v,x=item:setattr(x,'amount',v)
                 else:get=lambda a=items,j=i:a[j];setter=lambda v,a=items,j=i:a.__setitem__(j,v)
-                cap=998 if group=='catfruit' and names and 'マタタビ' in names[i] else 999
-                put(f'item:{group}:{i}',get(),get,setter,r,cap)
+                cap=998 if group=='matatabi' or (group=='catfruit' and names and i<len(names) and 'マタタビ' in names[i]) else 999
+                put(f'item:{source}:{i}',get(),get,setter,r,cap)
         elif domain=='orbs':
             ranks=[rank for group in meta.get('talent_orbs',[]) for rank in group.get('ranks',[]) if not r.get('rank') or rank['rank']==r['rank']]
             if not ranks:raise ParseError('本能玉ランク定義がありません。')
@@ -366,7 +373,9 @@ def apply_conditional(module,save,compiled):
         domain=rule['domain']
         if domain=='resource':roots.add(rule['field'])
         elif domain in ('cat','talent'):roots.add('cats')
-        elif domain=='items':roots.add('ototo' if rule['group']=='base_materials' else rule['group'] if rule['group']!='battle_items' else 'battle_items')
+        elif domain=='items':
+            group=rule['group']
+            roots.add('ototo' if group=='base_materials' else 'catfruit' if group in ('matatabi','stones') else group)
         elif domain=='orbs':roots.add('talent_orbs')
         elif domain=='story':roots.add('story')
         elif domain=='legend':roots.add({'legend':'event_stages','true_legend':'uncanny','zero_legend':'zero_legends'}[rule['series']])

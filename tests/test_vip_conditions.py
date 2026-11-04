@@ -56,6 +56,15 @@ class ConditionalTests(unittest.TestCase):
         compiled=self.compile(rules,**kw)
         return self.app['_apply_all_segments_unlocked'](save,{},[],{'_vip_form_extras':compiled})
 
+    def test_material_conditions_select_only_the_requested_category(self):
+        self.legend['vip_item_groups']['catfruit']=['青獣石','赤マタタビ','紫獣結晶','未定義']
+        save=self.save();save.catfruit=[10,20,30,40]
+        self.apply(save,[rule('items','amount','max',group='matatabi'),
+                         rule('items','amount',value=77,group='stones',names=['紫獣結晶'])])
+        self.assertEqual(self.reload(save).catfruit,[10,998,77,40])
+        with self.assertRaisesRegex(ValueError,'一意に特定'):
+            self.compile([rule('items','amount',value=1,group='stones',names=['赤マタタビ'])])
+
     def test_add_not_double_and_multiplier_cap_and_parity(self):
         s=self.save();s.catfood=50000;s.xp=11;s.rare_tickets=19
         self.apply(s,[rule('resource','catfood','add',15000),rule('resource','catfood','add',1000),

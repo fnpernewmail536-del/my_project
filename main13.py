@@ -1262,7 +1262,8 @@ VIP_FORM_QUANTITIES = {
     "custom_catseyes": ("キャッツアイ", 999, "catseyes"),
     "custom_catamins": ("ネコビタン", 999, "catamins"),
     "custom_base_materials": ("城素材", 999, "base_materials"),
-    "custom_matatabi": ("マタタビ・獣石", 998, "catfruit"),
+    "custom_matatabi": ("マタタビ", 998, "catfruit"),
+    "custom_stones": ("獣石・獣結晶", 999, "stones"),
     "custom_talent_orbs": ("本能玉", 998, "talent_orbs"),
 }
 
@@ -1337,8 +1338,9 @@ def compile_vip_form_extras(data):
                                       for rank in item.get("ranks", [])
                                       if orb_rank == "all" or str(rank.get("rank", "")).strip().upper() == "S"})
             else:
-                labels = group_metadata.get("vip_item_groups", {}).get(group) or VIP_ITEM_LABELS.get(group, [])
-                spec["ids"] = list(range(len(labels)))
+                labels = _vip_item_labels(group, group_metadata.get("vip_item_groups", {}))
+                scope = VIP_MATERIAL_SCOPES.get(group)
+                spec["ids"] = material_item_indices(scope, labels) if scope else list(range(len(labels)))
             if not spec["ids"]:
                 raise ValueError(label + "の種類定義を取得できません。")
         compiled["quantities"][key] = spec
@@ -2048,6 +2050,7 @@ VIP_ITEM_GROUPS = {
     "catamins": {"length": 256, "max": 9999},
     "base_materials": {"length": 256, "max": 9999},
     "catfruit": {"length": 512, "max": 998},
+    "stones": {"length": 512, "max": 999},
     "event_tickets": {"length": 512, "max": 9999},
     "labyrinth_medals": {"length": 4, "max": 32767},
 }
@@ -2076,9 +2079,24 @@ VIP_ITEM_SELECTED_VALUES = {
     "catamins": {"catamins", "custom_catamins"},
     "base_materials": {"base_materials", "custom_base_materials"},
     "catfruit": {"matatabi", "custom_matatabi"},
+    "stones": {"stones", "custom_stones"},
     "event_tickets": {"event_tickets", "custom_event_tickets"},
     "labyrinth_medals": {"labyrinth_medals"},
 }
+
+
+VIP_MATERIAL_SCOPES = {"catfruit": "matatabi", "stones": "stones"}
+
+
+def material_item_indices(scope, labels):
+    """Both categories share save.catfruit; retain the original save indices."""
+    markers = {"matatabi": ("マタタビ", "またたび"), "stones": ("獣石", "獣結晶")}[scope]
+    return [index for index, name in enumerate(labels) if any(marker in name for marker in markers)]
+
+
+def _vip_item_labels(group, dynamic_groups):
+    source = "catfruit" if group in VIP_MATERIAL_SCOPES else group
+    return dynamic_groups.get(source) or VIP_ITEM_LABELS.get(source, [])
 
 
 def safe_vip_items(data):
@@ -2097,15 +2115,17 @@ def safe_vip_items(data):
         if not isinstance(raw_values, dict):
             continue
         values = {}
+        labels = _vip_item_labels(group_key, dynamic_groups)
+        valid_length = min(spec["length"], len(labels)) if labels else spec["length"]
+        scope = VIP_MATERIAL_SCOPES.get(group_key)
+        allowed = set(material_item_indices(scope, labels)) if scope else None
         for raw_index, raw_amount in raw_values.items():
             try:
                 index = int(raw_index)
                 amount = int(raw_amount)
             except (TypeError, ValueError):
                 continue
-            labels = dynamic_groups.get(group_key) or VIP_ITEM_LABELS.get(group_key, [])
-            valid_length = min(spec["length"], len(labels)) if labels else spec["length"]
-            if 0 <= index < valid_length:
+            if 0 <= index < valid_length and (allowed is None or index in allowed):
                 values[index] = max(0, min(amount, spec["max"]))
         # 空dictも保持する。これは「親項目は選択済みだが個別項目は全解除」を表す。
         if group_key in raw_groups:
@@ -2145,6 +2165,7 @@ def apply_vip_items(save, vip_items):
         "catamins": getattr(save, "catamins", []),
         "base_materials": getattr(getattr(getattr(save, "ototo", None), "base_materials", None), "materials", []),
         "catfruit": getattr(save, "catfruit", []),
+        "stones": getattr(save, "catfruit", []),
         "labyrinth_medals": getattr(save, "labyrinth_medals", []),
     }
     for group_key, values in (vip_items or {}).items():
@@ -2165,13 +2186,15 @@ def apply_vip_items(save, vip_items):
                     print(f"[ERROR] event ticket {ticket_id}: {e}")
             continue
         target = targets.get(group_key)
-        labels = dynamic_labels.get(group_key) or VIP_ITEM_LABELS.get(group_key, [])
+        labels = _vip_item_labels(group_key, dynamic_labels)
+        scope = VIP_MATERIAL_SCOPES.get(group_key)
+        allowed = set(material_item_indices(scope, labels)) if scope else None
         if target is None:
             continue
         if group_key == "labyrinth_medals" and len(target) < 4:
             target.extend([0] * (4 - len(target)))
         for index, amount in values.items():
-            if not 0 <= index < len(target):
+            if not 0 <= index < len(target) or (allowed is not None and index not in allowed):
                 continue
             try:
                 entry = target[index]
@@ -2232,7 +2255,7 @@ CUSTOM_KEYS = [
     "custom_normal_tickets", "custom_rare_tickets",
     "custom_platinum_tickets", "custom_legend_tickets",
     "custom_leadership", "custom_battle_items", "custom_catamins",
-    "custom_catseyes", "custom_base_materials", "custom_matatabi",
+    "custom_catseyes", "custom_base_materials", "custom_matatabi", "custom_stones",
     "custom_talent_orbs", "custom_base_upgrades", "custom_event_tickets",
 ]
 
@@ -5822,12 +5845,23 @@ def apply_daiko_segment(save, selected_items: list, char_list: list, custom_amou
                 applied_logs.append(f"城素材({amt('custom_base_materials')})")
         except Exception as e: print(f"[ERROR] custom_base_materials: {e}")
 
-    if "matatabi" in selected_items:
-        try: save.catfruit = [998] * len(save.catfruit); applied_logs.append("マタタビ(998)")
-        except Exception as e: print(f"[ERROR] matatabi: {e}")
-    elif "custom_matatabi" in selected_items:
-        try: save.catfruit = [amt("custom_matatabi")] * len(save.catfruit); applied_logs.append(f"マタタビ({amt('custom_matatabi')})")
-        except Exception as e: print(f"[ERROR] custom_matatabi: {e}")
+    material_actions = set(selected_items) & {"matatabi", "custom_matatabi", "stones", "custom_stones"}
+    if material_actions:
+        try:
+            groups = get_legend_metadata().get("vip_item_groups", {})
+        except Exception:
+            groups = {}
+        labels = _vip_item_labels("catfruit", groups)
+        for scope, label, maximum in (("matatabi", "マタタビ", 998), ("stones", "獣石・獣結晶", 999)):
+            custom_key = "custom_" + scope
+            if scope not in material_actions and custom_key not in material_actions:
+                continue
+            amount = maximum if scope in material_actions else max(0, min(amt(custom_key), maximum))
+            indices = [index for index in material_item_indices(scope, labels) if index < len(save.catfruit)]
+            for index in indices:
+                save.catfruit[index] = amount
+            if indices:
+                applied_logs.append(f"{label}({amount})")
 
     if "talent_orbs" in selected_items:
         try:

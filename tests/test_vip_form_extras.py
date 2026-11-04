@@ -67,6 +67,33 @@ class VipFormExtraTests(unittest.TestCase):
     def reload(self, save):
         return core.SaveFile(core.Data(save.to_data().data), cc=core.CountryCode.from_code("jp"))
 
+    def test_material_bulk_actions_keep_the_other_category_and_unknown_slots(self):
+        self.legend["vip_item_groups"]["catfruit"] = ["紫獣石", "緑マタタビ", "紅獣結晶", "未定義", "赤マタタビの種"]
+        cases = [
+            ({"s1": ["matatabi"]}, {}, [3, 998, 5, 6, 998]),
+            ({"s4": ["custom_stones"]}, {"custom_stones": "123"}, [123, 4, 123, 6, 7]),
+            ({"s1": ["stones"], "s4": ["custom_matatabi"]}, {"custom_matatabi": "42"}, [999, 42, 999, 6, 42]),
+        ]
+        for selected, raw_amounts, expected in cases:
+            with self.subTest(selected=selected):
+                save = self.save()
+                save.catfruit = [3, 4, 5, 6, 7]
+                amounts = self.app["safe_custom_amounts"](raw_amounts)
+                self.app["_apply_all_segments_unlocked"](save, selected, [], amounts)
+                self.assertEqual(self.reload(save).catfruit, expected)
+
+    def test_material_ranges_keep_selected_indices_and_explicit_empty_group(self):
+        self.legend["vip_item_groups"]["catfruit"] = ["紫獣石", "緑マタタビ", "紅獣結晶", "未定義", "赤マタタビの種"]
+        extras = self.compile({"quantities": {"custom_matatabi": [20, 20], "custom_stones": [998, 999]}})
+        save = self.save()
+        save.catfruit = [3, 4, 5, 6, 7]
+        vip_items = self.app["safe_vip_items"]({"vip_items": {"catfruit": {"0": 100}, "stones": {"1": 100, "2": 999}}})
+        self.assertEqual(vip_items, {"catfruit": {}, "stones": {2: 999}})
+        with patch.object(self.app["secrets"], "randbelow", return_value=1):
+            self.app["_apply_all_segments_unlocked"](save, {"s1": ["matatabi", "stones"]}, [],
+                                                     {"_vip_form_extras": extras}, vip_items=vip_items)
+        self.assertEqual(self.reload(save).catfruit, [3, 4, 999, 6, 7])
+
     def test_plus_only_collaboration_exceptions_and_exclusions_survive_bulk_and_reload(self):
         extras = self.compile({"levels": {"2": {"plus": [20, 20], "collab_plus": [1, 1]}}, "excluded_ids": [5]})
         save = self.save()

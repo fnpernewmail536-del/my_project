@@ -106,7 +106,7 @@ def validate(raw):
         if 'series' in selector and selector['series'] not in ('ちび','大狂乱','特急'):
             raise ParseError('キャラ系列の指定が不正です。')
         if domain=='items':
-            if rule.get('group') not in ('battle_items','catseyes','catamins','base_materials','catfruit'):
+            if rule.get('group') not in ('battle_items','catseyes','catamins','base_materials','catfruit','matatabi','stones'):
                 raise ParseError('アイテム種類が不正です。')
             if 'names' in rule:strings(rule['names'])
         if domain=='orbs' and rule.get('rank') not in (None,'S'):
@@ -156,7 +156,8 @@ def compile_public(namespace, raw):
         if domain=='event' and rule['family']=='aku' and not metadata.get('aku',{}).get('chapters'):
             raise ParseError('魔界編のステージ定義を取得できません。')
         if domain=='items':
-            labels = metadata.get('vip_item_groups',{}).get(rule['group']) or namespace['VIP_ITEM_LABELS'].get(rule['group'])
+            group = 'catfruit' if rule['group'] in ('matatabi','stones') else rule['group']
+            labels = metadata.get('vip_item_groups',{}).get(group) or namespace['VIP_ITEM_LABELS'].get(group)
             if not labels:raise ParseError('アイテム種類の定義を取得できません。')
         if domain=='orbs' and not any(rank for group in metadata.get('talent_orbs',[]) for rank in group.get('ranks',[]) if not rule.get('rank') or rank.get('rank')==rule['rank']):
             raise ParseError('対象ランクの本能玉定義を取得できません。')
